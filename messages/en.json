@@ -1,0 +1,284 @@
+{
+    "HomePage": {
+        "title": "Please Login",
+        "role": "Please select role",
+        "email": "Email",
+        "login": "login",
+        "loggingIn": "Logging in...",
+        "password": "password",
+        "roles": {
+            "policeStation": "Police Station",
+            "district": "District"
+        }
+    },
+    "Sidebar": {
+        "dashboard": "Dashboard",
+        "malkhana": "Malkhana Entry",
+        "vehicles": "Seized vehicles",
+        "movement": "Malkhana movement",
+        "release": "Malkhana release",
+        "barcode": "Barcode",
+        "report": "Report"
+    },
+    "Dashboard": {
+        "totalEntries": "Total Entries",
+        "totalPoliceStation": "Total Police Station",
+        "totalMalkhanaEntry": "Total Malkhana Entry",
+        "malkhanaMovement": "Malkhana Movement",
+        "malkhanaRelease": "Malkhana Release",
+        "seizedVehicles": "Seized Vehicles",
+        "totalNilami": "Total Nilami",
+        "totalDestroyedItems": "Total Destroyed Items",
+        "returnedEntries": "Returned Entries",
+        "totalEnglishWine": "Total English Wine (in Ltr)",
+        "totalDesiWine": "Total Desi Wine (in Ltr)",
+        "totalWine": "Total Wine (in Ltr)",
+        "totalCash": "Total Cash",
+        "unitLtr": "Ltr",
+        "totalYellowItem": "Total Yellow Item"
+    },
+    "entry": {
+        "malkhanaEntryForm": {
+            "title": "Malkhana Entry Form",
+            "entryType": {
+                "label": "Entry type",
+                "options": {
+                    "malkhana": "Malkhana Entry",
+                    "fsl": "FSL",
+                    "kurki": "Kurki",
+                    "cash": "Cash Entry",
+                    "wine": "Wine/Daru",
+                    "unclaimed": "Unclaimed Entry",
+                    "other": "Other Entry",
+                    "yellowItem": "Yellow Item"
+                },
+                "specifyOther": "Specify Other Entry",
+                "yellowItemPrice": "Enter Yellow Item Price"
+            },
+            "wineSection": {
+                "typeLabel": "Wine",
+                "quantityLabel": "Wine",
+                "options": {
+                    "desi": "Desi",
+                    "angrezi": "Angrezi"
+                }
+            },
+            "cashSection": {
+                "label": "Cash"
+            },
+            "fields": {
+                "firNo": "FIR No",
+                "srNo": "Sr. No / Mud No.",
+                "caseProperty": "Case Property",
+                "gdNo": "GD No",
+                "gdDate": "GD Date",
+                "year": "Year",
+                "policeStation": "Police Station Name",
+                "ioName": "IO Name",
+                "vadiName": "Vadi Name",
+                "status": "Status",
+                "hm": "Malkhana Incharge",
+                "accused": "Accused Name",
+                "underSection": "Under Section",
+                "description": "Description",
+                "place": "Place",
+                "boxNo": "Box No",
+                "courtNo": "Court No",
+                "courtName": "Court Name",
+                "selectSrNo": "Select One Sr. No / Mud No."
+            },
+            "statusOptions": {
+                "destroy": "Destroy",
+                "nilami": "Nilami",
+                "pending": "Pending",
+                "other": "Other",
+                "onCourt": "On Court"
+            },
+            "placeholders": {
+                "enterDescription": "Enter Description"
+            },
+            "photoUpload": {
+                "label": "Upload Photo"
+            },
+            "buttons": {
+                "fetchData": "Fetch Data",
+                "save": "Save",
+                "print": "Print",
+                "modify": "Modify",
+                "clear": "Clear"
+            },
+            "toasts": {
+                "specifyOtherError": "Please specify the 'Other' entry type.",
+                "updateSuccess": "Data Updated",
+                "updateError": "Data not updated",
+                "addSuccess": "Data Added",
+                "firNotFound": "FIR not found",
+                "photoUploadSuccess": "Photo uploaded successfully",
+                "photoUploadError": "Failed to upload photo",
+                "printError": "Please fill in the form or fetch data before printing."
+            }
+        }
+    },
+    "seizedVehicleForm": {
+        "title": "Seized Vehicle Entry",
+        "labels": {
+            "caseProperty": "Case Property",
+            "seizedBy": "Seized By",
+            "rtoName": "RTO Name",
+            "multipleRecordsFound": "Multiple Records Found. Please Select One:",
+            "firNo": "FIR no.",
+            "srNo": "Sr. No / Mal No.",
+            "gdNo": "GD No",
+            "gdDate": "GD Date",
+            "underSection": "Under Section",
+            "vehicleType": "Vehicle Type",
+            "colour": "Colour",
+            "registrationNo": "Registration No.",
+            "engineNo": "Engine No.",
+            "description": "Description",
+            "status": "Status",
+            "policeStation": "Police Station",
+            "ownerName": "Owner Name"
+        },
+        "options": {
+            "case": {
+                "mvAct": "mv act",
+                "artoSeized": "arto seized",
+                "bnsIpc": "BNS/IPC",
+                "excise": "EXCISE",
+                "seized": "SEIZED",
+                "unclaimed": "UNCLAMMED VEHICLE"
+            },
+            "status": {
+                "destroy": "Destroy",
+                "nilami": "Nilami",
+                "pending": "Pending",
+                "other": "Other",
+                "onCourt": "On Court",
+                "otherStatus": "Other Status"
+            }
+        },
+        "buttons": {
+            "search": "Search",
+            "getByFir": "Get by FIR",
+            "save": "Save",
+            "modify": "Modify",
+            "saving": "Saving..."
+        },
+        "placeholders": {
+            "fir": "FIR: {fir}",
+            "sr": "SR: {sr}"
+        },
+        "toasts": {
+            "updateSuccess": "Data Updated",
+            "addSuccess": "Data Added",
+            "saveError": "An error occurred during save.",
+            "recordsFound": "{count} records found. Please select one.",
+            "fetchSuccess": "Data fetched",
+            "noData": "No data found.",
+            "fetchFailed": "Fetch failed. See console."
+        }
+    },
+    "malkhanaMovementForm": {
+        "title": "Malkhana Movement",
+        "labels": {
+            "selectType": "1. Select Type:",
+            "firNo": "FIR No.",
+            "srNo": "Sr. No / Mal No.",
+            "orSrNo": "OR Sr. No / Mal No.",
+            "underSection": "Under Section",
+            "name": "Name",
+            "moveDate": "Move Date",
+            "takenOutBy": "Taken Out By",
+            "moveTrackingNo": "Move Tracking No",
+            "movePurpose": "Move Purpose",
+            "returnDate": "Return Back Date",
+            "returnBackFrom": "Return Back From",
+            "receivedBy": "Received By",
+            "uploadPhoto": "Upload Photo",
+            "uploadDocument": "Upload Document",
+            "multipleRecords": "Multiple Records Found. Please Select One:",
+            "updateDetails": "3. Update Movement Details",
+            "caseProperty": "Case Property",
+            "isReturned": "Is Item Returned?"
+        },
+        "buttons": {
+            "fetchRecord": "2. Fetch Record",
+            "saveMovement": "4. Save Movement",
+            "clearForm": "Clear Form",
+            "fetching": "Fetching..."
+        },
+        "options": {
+            "type": {
+                "malkhana": "malkhana",
+                "seizedVehicle": "siezed vehical"
+            },
+            "returnFrom": {
+                "court": "Court",
+                "fsl": "FSL",
+                "other": "Other"
+            }
+        },
+        "placeholders": {
+            "srNo": "SR: {srNo}"
+        },
+        "toasts": {
+            "selectType": "Please select a type first.",
+            "enterFirOrSr": "Please enter an FIR No. or Sr. No.",
+            "recordsFound": "{count} records found. Please select one.",
+            "fetchSuccess": "Data Fetched Successfully!",
+            "noRecord": "No record found.",
+            "fetchFailed": "Fetch failed. See console.",
+            "noEntrySelected": "No entry selected. Please fetch an entry first.",
+            "updateSuccess": "Movement Data Updated Successfully!",
+            "updateFailed": "Failed to update movement data.",
+            "saveFailed": "Save failed. An error occurred."
+        }
+    },
+    "maalkhanaReleaseForm": {
+        "title": "Maalkhana Release",
+        "labels": {
+            "selectType": "1. Select Type to Release From:",
+            "firNo": "FIR No.",
+            "orSrNo": "OR Sr. No / Mal No.",
+            "multipleRecords": "Multiple Records Found. Please Select One:",
+            "enterDetails": "3. Enter Release Details",
+            "caseProperty": "Case Property",
+            "underSection": "Under Section",
+            "releaseItemName": "Release Item Name",
+            "receiverName": "Receiver Name",
+            "fathersName": "Father's Name",
+            "address": "Address",
+            "releaseOrderedBy": "Release Ordered By",
+            "mobileNo": "Mobile No.",
+            "uploadPhoto": "Upload Photo",
+            "uploadDocument": "Upload Document"
+        },
+        "buttons": {
+            "fetchRecord": "2. Fetch Record",
+            "saveAndRelease": "4. Save and Release",
+            "clearForm": "Clear Form",
+            "fetching": "Fetching..."
+        },
+        "options": {
+            "type": {
+                "malkhana": "malkhana",
+                "seizedVehicle": "seized vehicle"
+            }
+        },
+        "placeholders": {
+            "srNo": "SR: {srNo}"
+        },
+        "toasts": {
+            "selectType": "Please select a type first.",
+            "enterFirOrSr": "Please enter an FIR No. or Sr. No.",
+            "recordsFound": "{count} records found. Please select one.",
+            "fetchSuccess": "Data Fetched Successfully!",
+            "noRecord": "No record found.",
+            "fetchFailed": "Fetch failed. Please check the console for details.",
+            "noRecordSelected": "Please fetch a valid record before saving.",
+            "updateSuccess": "Data updated successfully!",
+            "saveError": "An error occurred during save."
+        }
+    }
+}

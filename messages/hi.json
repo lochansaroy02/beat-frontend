@@ -1,0 +1,283 @@
+{
+    "HomePage": {
+        "title": "लॉगिन करें",
+        "email": "ईमेल",
+        "password": "पासवर्ड",
+        "login": "लॉगिन करें",
+        "loggingIn": "लॉगिन हो रहा है ....",
+        "role": "अपना रोल चुने",
+        "roles": {
+            "policeStation": "पुलिस थाना",
+            "district": "जिला"
+        }
+    },
+    "Dashboard": {
+        "totalEntries": "कुल प्रविष्टियाँ",
+        "totalPoliceStation": "कुल पुलिस थाना",
+        "totalMalkhanaEntry": "कुल मालख़ाना प्रविष्टि",
+        "malkhanaMovement": "मालख़ाना मूवमेंट",
+        "malkhanaRelease": "मालख़ाना विमोचन",
+        "seizedVehicles": "जब्त वाहन",
+        "totalNilami": "कुल नीलामी",
+        "totalDestroyedItems": "कुल नष्ट की गई वस्तुएँ",
+        "returnedEntries": "वापस की गई प्रविष्टियाँ",
+        "totalEnglishWine": "कुल अंग्रेज़ी शराब (लीटर में)",
+        "totalDesiWine": "कुल देसी शराब (लीटर में)",
+        "totalWine": "कुल शराब (लीटर में)",
+        "totalCash": "कुल नकद",
+        "unitLtr": "लीटर",
+        "totalYellowItem": "कुल पीली वस्तु"
+    },
+    "Sidebar": {
+        "dashboard": "डैशबोर्ड",
+        "malkhana": "मालख़ाना प्रविष्टि",
+        "vehicles": "जब्त वाहन",
+        "movement": "मालख़ाना मूवमेंट",
+        "release": "मालख़ाना विमोचन",
+        "barcode": "बारकोड",
+        "report": "रिपोर्ट"
+    },
+    "entry": {
+        "malkhanaEntryForm": {
+            "title": "मालखाना प्रवेश प्रपत्र",
+            "entryType": {
+                "label": "प्रविष्टि का प्रकार",
+                "options": {
+                    "malkhana": "मालखाना प्रविष्टि",
+                    "fsl": "एफएसएल",
+                    "kurki": "कुर्की",
+                    "cash": "नकद प्रविष्टि",
+                    "wine": "शराब/दारू",
+                    "unclaimed": "लावारिस प्रविष्टि",
+                    "other": "अन्य प्रविष्टि",
+                    "yellowItem": "पीली वस्तु"
+                },
+                "specifyOther": "अन्य प्रविष्टि निर्दिष्ट करें",
+                "yellowItemPrice": "पीली वस्तु का मूल्य दर्ज करें"
+            },
+            "wineSection": {
+                "typeLabel": "शराब",
+                "quantityLabel": "शराब",
+                "options": {
+                    "desi": "देसी",
+                    "angrezi": "अंग्रेजी"
+                }
+            },
+            "cashSection": {
+                "label": "नकद"
+            },
+            "fields": {
+                "firNo": "एफ.आई.आर. नंबर",
+                "srNo": "क्रम संख्या / मुद्द संख्या",
+                "caseProperty": "केस संपत्ति",
+                "gdNo": "जी.डी. नंबर",
+                "gdDate": "जी.डी. दिनांक",
+                "year": "वर्ष",
+                "policeStation": "पुलिस स्टेशन का नाम",
+                "ioName": "आई.ओ. का नाम",
+                "vadiName": "वादी का नाम",
+                "status": "स्थिति",
+                "hm": "मालखाना प्रभारी",
+                "accused": "अभियुक्त का नाम",
+                "underSection": "धारा के तहत",
+                "description": "विवरण",
+                "place": "स्थान",
+                "boxNo": "बॉक्स नंबर",
+                "courtNo": "न्यायालय नंबर",
+                "courtName": "न्यायालय का नाम",
+                "selectSrNo": "एक क्रम संख्या / मुद्द संख्या चुनें"
+            },
+            "statusOptions": {
+                "destroy": "नष्ट",
+                "nilami": "नीलामी",
+                "pending": "लंबित",
+                "other": "अन्य",
+                "onCourt": "न्यायालय में"
+            },
+            "placeholders": {
+                "enterDescription": "विवरण दर्ज करें"
+            },
+            "photoUpload": {
+                "label": "फोटो अपलोड करें"
+            },
+            "buttons": {
+                "fetchData": "डेटा प्राप्त करें",
+                "save": "सहेजें",
+                "print": "प्रिंट",
+                "modify": "बदलें",
+                "clear": "हटाएँ"
+            },
+            "toasts": {
+                "specifyOtherError": "कृपया 'अन्य' प्रविष्टि का प्रकार निर्दिष्ट करें।",
+                "updateSuccess": "डेटा अपडेट हो गया।",
+                "addSuccess": "डेटा सफलतापूर्वक जोड़ा गया।",
+                "firNotFound": "एफ.आई.आर. नहीं मिली।",
+                "photoUploadSuccess": "फोटो सफलतापूर्वक अपलोड हो गया।",
+                "photoUploadError": "फोटो अपलोड करने में विफल।",
+                "printError": "कृपया प्रिंट करने से पहले फॉर्म भरें या डेटा प्राप्त करें।"
+            }
+        }
+    },
+    "seizedVehicleForm": {
+        "title": "जब्त वाहन प्रविष्टि",
+        "labels": {
+            "caseProperty": "केस संपत्ति",
+            "seizedBy": "द्वारा जब्त",
+            "rtoName": "आरटीओ का नाम",
+            "multipleRecordsFound": "एक से अधिक रिकॉर्ड मिले। कृपया एक चुनें:",
+            "firNo": "एफ.आई.आर. नंबर",
+            "srNo": "सी.नं. / माल नं.",
+            "gdNo": "जी.डी. नंबर",
+            "gdDate": "जी.डी. दिनांक",
+            "underSection": "धारा के तहत",
+            "vehicleType": "वाहन का प्रकार",
+            "colour": "रंग",
+            "registrationNo": "पंजीकरण संख्या",
+            "engineNo": "इंजन नंबर",
+            "description": "विवरण",
+            "status": "स्थिति",
+            "policeStation": "पुलिस थाना",
+            "ownerName": "मालिक का नाम"
+        },
+        "options": {
+            "case": {
+                "mvAct": "एमवी एक्ट",
+                "artoSeized": "आरटीओ द्वारा जब्त",
+                "bnsIpc": "बीएनएस/आईपीसी",
+                "excise": "एक्साइज",
+                "seized": "जब्त",
+                "unclaimed": "लावारिस वाहन"
+            },
+            "status": {
+                "destroy": "नष्ट",
+                "nilami": "नीलामी",
+                "pending": "लंबित",
+                "other": "अन्य",
+                "otherStatus": "अन्य स्थिति",
+                "onCourt": "न्यायालय में"
+            }
+        },
+        "buttons": {
+            "search": "खोजें",
+            "getByFir": "FIR से प्राप्त करें",
+            "save": "सहेजें",
+            "modify": "संशोधित करें",
+            "saving": "सहेज रहा है..."
+        },
+        "placeholders": {
+            "fir": "FIR: {fir}",
+            "sr": "SR: {sr}"
+        },
+        "toasts": {
+            "updateSuccess": "डेटा अपडेट हो गया।",
+            "addSuccess": "डेटा सफलतापूर्वक जोड़ा गया।",
+            "saveError": "सहेजने के दौरान एक त्रुटि हुई।",
+            "recordsFound": "{count} रिकॉर्ड मिले। कृपया एक चुनें।",
+            "fetchSuccess": "डेटा प्राप्त हुआ।",
+            "noData": "कोई डेटा नहीं मिला।",
+            "fetchFailed": "डेटा प्राप्त करने में विफल। कंसोल देखें।"
+        }
+    },
+    "malkhanaMovementForm": {
+        "title": "मालखाना मूवमेंट",
+        "labels": {
+            "selectType": "१. प्रकार चुनें:",
+            "firNo": "एफ.आई.आर. नंबर",
+            "srNo": "सी.नं. / माल नं.",
+            "orSrNo": "या सी.नं. / माल नं.",
+            "underSection": "धारा के तहत",
+            "name": "नाम",
+            "moveDate": "मूवमेंट की तारीख",
+            "takenOutBy": "किसके द्वारा निकाला गया",
+            "moveTrackingNo": "मूवमेंट ट्रैकिंग नंबर",
+            "movePurpose": "मूवमेंट का उद्देश्य",
+            "returnDate": "वापसी की तारीख",
+            "returnBackFrom": "कहाँ से वापस आया",
+            "receivedBy": "किसके द्वारा प्राप्त किया गया",
+            "uploadPhoto": "फोटो अपलोड करें",
+            "uploadDocument": "दस्तावेज़ अपलोड करें",
+            "multipleRecords": "एक से अधिक रिकॉर्ड मिले। कृपया एक चुनें:",
+            "updateDetails": "३. मूवमेंट विवरण अपडेट करें",
+            "caseProperty": "केस संपत्ति",
+            "isReturned": "क्या आइटम वापस आ गया है?"
+        },
+        "buttons": {
+            "fetchRecord": "२. रिकॉर्ड प्राप्त करें",
+            "saveMovement": "४. मूवमेंट सहेजें",
+            "clearForm": "फॉर्म साफ़ करें",
+            "fetching": "प्राप्त हो रहा है..."
+        },
+        "options": {
+            "type": {
+                "malkhana": "मालखाना",
+                "seizedVehicle": "जब्त वाहन"
+            },
+            "returnFrom": {
+                "court": "न्यायालय",
+                "fsl": "एफएसएल",
+                "other": "अन्य"
+            }
+        },
+        "placeholders": {
+            "srNo": "SR: {srNo}"
+        },
+        "toasts": {
+            "selectType": "कृपया पहले एक प्रकार चुनें।",
+            "enterFirOrSr": "कृपया एफ.आई.आर. नंबर या सी.नं. दर्ज करें।",
+            "recordsFound": "{count} रिकॉर्ड मिले। कृपया एक चुनें।",
+            "fetchSuccess": "डेटा सफलतापूर्वक प्राप्त हुआ!",
+            "noRecord": "कोई रिकॉर्ड नहीं मिला।",
+            "fetchFailed": "डेटा प्राप्त करने में विफल। कंसोल देखें।",
+            "noEntrySelected": "कोई प्रविष्टि नहीं चुनी गई। कृपया पहले एक प्रविष्टि प्राप्त करें।",
+            "updateSuccess": "मूवमेंट डेटा सफलतापूर्वक अपडेट हो गया!",
+            "updateFailed": "मूवमेंट डेटा अपडेट करने में विफल।",
+            "saveFailed": "सहेजने में विफल। एक त्रुटि हुई।"
+        }
+    },
+    "maalkhanaReleaseForm": {
+        "title": "मालखाना रिहाई",
+        "labels": {
+            "selectType": "१. रिहाई के लिए प्रकार चुनें:",
+            "firNo": "एफ.आई.आर. नंबर",
+            "orSrNo": "या सी.नं. / माल नं.",
+            "multipleRecords": "एक से अधिक रिकॉर्ड मिले। कृपया एक चुनें:",
+            "enterDetails": "३. रिहाई का विवरण दर्ज करें",
+            "caseProperty": "केस संपत्ति",
+            "underSection": "धारा के तहत",
+            "releaseItemName": "रिहा की जाने वाली वस्तु का नाम",
+            "receiverName": "प्राप्तकर्ता का नाम",
+            "fathersName": "पिता का नाम",
+            "address": "पता",
+            "releaseOrderedBy": "रिहाई आदेश ",
+            "mobileNo": "मोबाइल नंबर",
+            "uploadPhoto": "फोटो अपलोड करें",
+            "uploadDocument": "दस्तावेज़ अपलोड करें"
+        },
+        "buttons": {
+            "fetchRecord": "२. रिकॉर्ड प्राप्त करें",
+            "saveAndRelease": "४. सहेजें और रिहा करें",
+            "clearForm": "फॉर्म साफ़ करें",
+            "fetching": "प्राप्त हो रहा है..."
+        },
+        "options": {
+            "type": {
+                "malkhana": "मालखाना",
+                "seizedVehicle": "जब्त वाहन"
+            }
+        },
+        "placeholders": {
+            "srNo": "SR: {srNo}"
+        },
+        "toasts": {
+            "selectType": "कृपया पहले एक प्रकार चुनें।",
+            "enterFirOrSr": "कृपया एफ.आई.आर. नंबर या सी.नं. दर्ज करें।",
+            "recordsFound": "{count} रिकॉर्ड मिले। कृपया एक चुनें।",
+            "fetchSuccess": "डेटा सफलतापूर्वक प्राप्त हुआ!",
+            "noRecord": "कोई रिकॉर्ड नहीं मिला।",
+            "fetchFailed": "डेटा प्राप्त करने में विफल। कृपया कंसोल देखें।",
+            "noRecordSelected": "कृपया सहेजने से पहले एक वैध रिकॉर्ड प्राप्त करें।",
+            "updateSuccess": "डेटा सफलतापूर्वक अपडेट हो गया!",
+            "saveError": "सहेजने के दौरान एक त्रुटि हुई।"
+        }
+    }
+}
