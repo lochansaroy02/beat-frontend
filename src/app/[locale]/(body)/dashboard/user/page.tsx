@@ -7,11 +7,10 @@ import { useAuthStore } from "@/store/authStore";
 import { usePersonStore } from "@/store/personStore";
 import { useQRstore } from "@/store/qrStore";
 import { Person, QRDataItem } from "@/types/type";
-// NOTE: cordToAddress is now moved/used more strategically in the table/hook
 import { Download } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-// --- Utility Definitions (TIME_PHASES, CSV, Aggregation Logic remain the same) ---
+// --- Utility Definitions (TIME_PHASES, CSV, Aggregation Logic) ---
 interface TimePhase {
     label: string;
     startHour: number; // 24-hour format (0-23)
@@ -36,7 +35,6 @@ interface ScanSummaryRow {
 }
 
 const convertToCSV = (data: any[], filename: string) => {
-    // ... (CSV logic remains the same)
     if (!data || data.length === 0) return;
     const headers = Object.keys(data[0]);
     const csvRows = data.map(row =>
@@ -63,7 +61,6 @@ const convertToCSV = (data: any[], filename: string) => {
 };
 
 const aggregateScanData = (qrDataMap: Map<string, QRDataItem[]>): ScanSummaryRow[] => {
-    // ... (Aggregation logic remains the same)
     const stationPhaseCounts = new Map<string, Map<string, number>>();
     const allStations = new Set<string>();
 
@@ -94,10 +91,12 @@ const aggregateScanData = (qrDataMap: Map<string, QRDataItem[]>): ScanSummaryRow
 
     for (const [, qrData] of qrDataMap.entries()) {
         qrData.forEach(item => {
+            // Check for both policeStation and scannedOn existence before processing
             if (item.policeStation && item.scannedOn) {
                 const station = item.policeStation;
                 const scannedOnParts = item.scannedOn.split(' ');
-                const timeStr = scannedOnParts.slice(1).join(' ');
+                // Extract time string, which starts after the date part (index 0)
+                const timeStr = scannedOnParts.length > 1 ? scannedOnParts.slice(1).join(' ') : '';
                 const phaseLabel = getTimePhaseLabel(timeStr);
 
                 if (phaseLabel) {
@@ -134,17 +133,14 @@ const aggregateScanData = (qrDataMap: Map<string, QRDataItem[]>): ScanSummaryRow
 // -----------------------------------------------------------
 
 const Page = () => {
-    // Kept for reference
-    const { getPerson, personData } = usePersonStore(); // ADDED updatePersonDetails
+    const { getPerson, personData } = usePersonStore();
     const { getQRData } = useQRstore();
 
     const { userData: authUserData, initializeStore, isInitialized } = useAuthStore();
 
-    // Use filteredData for the *entire* list that matches filters
     const [filteredData, setFilteredData] = useState<Person[]>(personData);
 
     const [qrDataMap, setQrDataMap] = useState<Map<string, QRDataItem[]>>(new Map());
-    // NOTE: addressMap is removed from Page.tsx to simplify and avoid huge state updates
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -157,18 +153,19 @@ const Page = () => {
     const [selectedPoliceStation, setSelectedPoliceStation] = useState<string>("");
     // -------------------------------------
 
-    // --- NEW PAGINATION STATE ---
+    // --- PAGINATION STATE ---
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(20); // Set a reasonable number of items per page
+    const [itemsPerPage] = useState(20);
     // ----------------------------
 
-    // --- EDIT STATE MANAGEMENT (Kept for completeness, though modal component is omitted) ---
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [userToEdit, setUserToEdit] = useState<Person | null>(null);
+    // --- EDIT STATE MANAGEMENT ---
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false); // Kept for reference
+    const [userToEdit, setUserToEdit] = useState<Person | null>(null); // Kept for reference
 
     const handleEdit = (person: Person) => {
         setUserToEdit(person);
         setIsEditModalOpen(true);
+        // NOTE: In the provided code, the actual edit modal is omitted.
     };
 
     const handleSave = async (updatedUser: Person) => {
@@ -185,7 +182,7 @@ const Page = () => {
     // -------------------------------------
 
 
-    /** * Fetches the initial person data for the current user. */
+    /** Fetches the initial person data for the current user. */
     const handleGetPersonData = useCallback(async (userId: number | undefined) => {
         if (userId) {
             //@ts-ignore
@@ -253,7 +250,6 @@ const Page = () => {
                 setIsLoading(false);
             };
 
-            // Only run the fetch if there are new PNOs to fetch for
             const hasNewData = personData.some(p => !qrDataMap.has(p.pnoNo));
 
             if (hasNewData || qrDataMap.size === 0) {
@@ -264,12 +260,10 @@ const Page = () => {
         } else if (personData && personData.length === 0) {
             setIsLoading(false);
         }
-    }, [personData, fetchQRDataForPerson, qrDataMap]); // Added qrDataMap as dependency
+    }, [personData, fetchQRDataForPerson, qrDataMap]);
 
 
-    /**
-     * Formats the Date object into a DD-MM-YYYY string for searching.
-     */
+    /** Formats the Date object into a DD-MM-YYYY string for searching. */
     function formatDateString(dateStr: Date | undefined, setter: React.Dispatch<React.SetStateAction<string>>) {
         if (!dateStr) {
             setter("");
@@ -325,6 +319,7 @@ const Page = () => {
         const stations = new Set<string>();
         for (const qrData of qrDataMap.values()) {
             qrData.forEach(item => {
+                // Ensure policeStation is a non-null string
                 if (item.policeStation) {
                     stations.add(item.policeStation);
                 }
@@ -342,7 +337,6 @@ const Page = () => {
         const needsScanFiltering = actualStartDate || actualEndDate || selectedTimePhase || selectedPoliceStation;
 
         if (needsScanFiltering) {
-            // ... (Date/Time filtering logic remains the same)
             const startOfDay = actualStartDate ? (() => {
                 const [sDay, sMonth, sYear] = actualStartDate.split('-').map(Number);
                 const date = new Date(sYear, sMonth - 1, sDay);
@@ -359,6 +353,7 @@ const Page = () => {
 
             for (const [pnoNo, qrData] of qrDataMap.entries()) {
                 const hasScanMatch = qrData.some(item => {
+                    // Ensure scannedOn is a non-null string before processing
                     if (!item.scannedOn) return false;
 
                     let stationMatches = selectedPoliceStation ? item.policeStation === selectedPoliceStation : true;
@@ -371,14 +366,15 @@ const Page = () => {
                     let dateMatches = true;
                     if (actualStartDate || actualEndDate) {
                         const [qDay, qMonth, qYear] = datePart.split('-').map(Number);
-                        if (qDay === undefined || qMonth === undefined || qYear === undefined) return false;
+                        if (qDay === undefined || qMonth === undefined || qYear === undefined || isNaN(qDay)) return false;
 
                         const scanDate = new Date(qYear, qMonth - 1, qDay);
-                        scanDate.setHours(12, 0, 0, 0);
+                        scanDate.setHours(12, 0, 0, 0); // Normalize time for comparison
 
                         let startMatch = startOfDay ? scanDate.getTime() >= startOfDay.getTime() : true;
                         let endMatch = endOfDay ? scanDate.getTime() <= endOfDay.getTime() : true;
 
+                        // Adjusted logic for single date selection (start OR end date)
                         if (startOfDay && !endOfDay) {
                             startMatch = datePart === actualStartDate;
                         }
@@ -413,9 +409,8 @@ const Page = () => {
             );
         }
 
-        // Set the filtered data and reset pagination to the first page
         setFilteredData(currentFilteredData);
-        setCurrentPage(1); // Crucial to reset the page on filter change
+        setCurrentPage(1);
     }, [personData, searchQuery, actualStartDate, actualEndDate, selectedTimePhase, selectedPoliceStation, qrDataMap]);
 
 
@@ -460,20 +455,12 @@ const Page = () => {
     );
     // ------------------------
 
-    const handleSearchClick = () => {
-        applyFilters();
-    };
-
-
-    // --- Handle Download Click ---
     const handleDownloadSummary = () => {
         const summaryData = aggregateScanData(qrDataMap);
         const filename = `Scan_Summary_${new Date().toISOString().slice(0, 10)}.csv`;
         convertToCSV(summaryData, filename);
     };
     // ------------------------------------------
-
-
 
     return (
         <div className='w-full p-4'>
@@ -543,14 +530,11 @@ const Page = () => {
                 // Only pass the items for the current page
                 personData={currentItems}
                 qrDataMap={qrDataMap}
-                // addressMap is now managed internally or via a hook in UserTable
                 isLoading={isLoading}
                 onEditUser={handleEdit}
             />
 
             {paginationControls}
-
-
         </div>
     );
 }

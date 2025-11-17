@@ -2,29 +2,30 @@
 
 import { useUserStore } from "@/store/userStore";
 import { Person, QRDataItem } from "@/types/type";
-import { cordToAddress } from "@/utils/cordToAddress"; // Import the utility
+import { cordToAddress } from "@/utils/cordToAddress";
 import { Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ImageSlider from "./ImageSlider";
 
 // Define a type for a single QR scan record for better clarity
-type QrScanData = QRDataItem; // Using QRDataItem directly
+type QrScanData = QRDataItem;
 
 // Update the props type
 type UserTableProps = {
-    personData: Person[], // Person[] on the CURRENT PAGE
-    qrDataMap: Map<string, QRDataItem[]>, // Map<PNO_NO, QR_SCAN_ARRAY>
+    personData: Person[],
+    qrDataMap: Map<string, QRDataItem[]>,
     isLoading: boolean,
     onEditUser: (person: Person) => void;
 }
+
 
 const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTableProps) => {
 
     const route = useRouter();
     const { setSelectedUser } = useUserStore();
 
-    // NEW: Local state for geocoded addresses for the current page's personnel
+    // Local state for geocoded addresses for the current page's personnel
     const [addressMap, setAddressMap] = useState<Map<string, string>>(new Map());
 
     // Effect to handle geocoding only for the visible personnel
@@ -40,20 +41,20 @@ const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTablePr
 
             for (const person of personData) {
                 const pnoNo = person.pnoNo;
-                // Get the last scan for this person
                 const qrData = qrDataMap.get(pnoNo);
+                // Get the last scan for this person
                 const lastScan = qrData && qrData.length > 0 ? qrData[qrData.length - 1] : null;
 
-                // Check if we already have the address (simple check, could be improved)
-                if (addressMap.has(pnoNo) && addressMap.get(pnoNo) !== 'Fetching Address...') {
-                    newAddressMap.set(pnoNo, addressMap.get(pnoNo)!);
+                const existingAddress = addressMap.get(pnoNo);
+                if (existingAddress && existingAddress !== 'Fetching Address...') {
+                    newAddressMap.set(pnoNo, existingAddress);
                     continue;
                 }
 
-                // Set initial state to 'Fetching...'
-                newAddressMap.set(pnoNo, lastScan ? 'Fetching Address...' : 'N/A');
+                // Check for existence of lat/long before attempting geocoding
+                if (lastScan && lastScan.lattitude && lastScan.longitude) {
+                    newAddressMap.set(pnoNo, 'Fetching Address...');
 
-                if (lastScan) {
                     const promise = cordToAddress(lastScan.lattitude, lastScan.longitude)
                         .then(address => {
                             newAddressMap.set(pnoNo, address || 'Address N/A');
@@ -61,22 +62,24 @@ const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTablePr
                             newAddressMap.set(pnoNo, 'Error Fetching Address');
                         });
                     addressPromises.push(promise);
+                } else {
+                    newAddressMap.set(pnoNo, 'N/A');
                 }
             }
 
-            // Await promises and update the map with the new addresses
-            await Promise.all(addressPromises);
+            if (addressPromises.length > 0) {
+                await Promise.all(addressPromises);
+            }
 
-            // Merge the existing addresses with the newly fetched ones
             setAddressMap(prevMap => new Map([...prevMap, ...newAddressMap]));
         };
 
         fetchAddressesForVisible();
 
-    }, [personData, qrDataMap]); // Rerun when the visible data or QR data changes
+    }, [personData, qrDataMap]);
 
     const handleEditUser = (data: any) => {
-        // This is the old edit handler - let's keep it for compatibility if it's for 'Add Users' page
+        // This is for navigating to the user edit page
         setSelectedUser(data);
         route.push('/add-users');
     };
@@ -84,7 +87,7 @@ const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTablePr
     const handleDelete = (personId: string, scanId?: string) => {
         if (window.confirm(`Are you sure you want to delete this ${scanId ? 'scan record' : 'person record'}?`)) {
             console.log(`Delete requested for Person ID: ${personId}, Scan ID: ${scanId || 'N/A'}`);
-            // Implement actual delete logic here
+            // TODO: Implement actual delete API call logic here
         }
     };
 
@@ -93,9 +96,8 @@ const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTablePr
         <div className="flex items-center justify-between gap-2">
             <span className="font-semibold">{person.name}</span>
             <button
-                // Use the correct edit handler passed via props (if implementing the modal)
-                // OR use the existing one to navigate to /add-users
-                onClick={() => handleEditUser(person)}
+                // Calls the edit handler passed down from the parent dashboard
+                onClick={() => onEditUser(person)}
                 className="text-blue-600 hover:text-blue-900 p-1 rounded transition-colors"
                 title="Edit User Details"
             >
@@ -141,9 +143,9 @@ const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTablePr
                 <tbody className="bg-white divide-y divide-gray-200">
                     {
                         personData.map((person: Person, index: number) => {
-                            const personQrData: QrScanData[] = (qrDataMap.get(person.pnoNo) as unknown as QrScanData[]) || [];
+                            // Safely retrieve and cast QR data
+                            const personQrData: QrScanData[] = (qrDataMap.get(person.pnoNo) || []) as QrScanData[];
                             const scanCount = personQrData.length;
-                            // Retrieve address from local state map
                             const address = addressMap.get(person.pnoNo) || (scanCount > 0 ? 'Fetching Address...' : 'N/A');
 
                             if (scanCount === 0) {
@@ -188,19 +190,19 @@ const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTablePr
                                             </>
                                         )}
 
-                                        {/* Non-RowSpan Columns (Scan-specific data) */}
-                                        <td className="px-6 py-4 text-sm text-gray-700">{scan.scannedOn}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">{scan.policeStation}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">{scan.dutyPoint}</td>
+                                        {/* Scan-specific data */}
+                                        <td className="px-6 py-4 text-sm text-gray-700">{scan.scannedOn || 'N/A'}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-700">{scan.policeStation || 'N/A'}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-700">{scan.dutyPoint || 'N/A'}</td>
 
-                                        {/* Column 8: Images (RowSpan) */}
+                                        {/* Images (RowSpan) - Only on the first row */}
                                         {scanIndex === 0 && (
                                             <td rowSpan={scanCount} className="px-6 py-4 border-l border-gray-200">
                                                 <ImageSlider photos={person.photos} />
                                             </td>
                                         )}
 
-                                        {/* 9. Actions Column (Scan-specific Deletion) */}
+                                        {/* Actions Column (Scan-specific Deletion) */}
                                         <td className="px-6 py-4 text-sm text-gray-700">
                                             <button
                                                 onClick={() => handleDelete(person.id!, scan.id)}
