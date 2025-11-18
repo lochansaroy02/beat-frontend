@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 interface InputProps {
     id?: string
     label?: string;
+    customPlaceholder?: string,
     value: string | number | boolean | undefined | null;
     className?: string;
     setInput?: (val: string) => void;
@@ -19,6 +20,7 @@ const InputComponent = ({
     label,
     value,
     className,
+    customPlaceholder,
     setInput,
     type,
     id,
@@ -28,13 +30,13 @@ const InputComponent = ({
 }: InputProps) => {
     return (
         <div className={cn("flex flex-col  ", className)}>
-            <Label className="w-1/4 text-[14px] text-nowrap text-neutral-800">
+            <Label className="w-1/3 text-[14px] text-nowrap text-neutral-800">
                 {label}
             </Label>
             <Input
                 id={id}
                 type={type}
-                placeholder={setInput ? `Enter ${label}` : ""}
+                placeholder={customPlaceholder?.length == 0 ? `Enter ${label}` : customPlaceholder}
                 className="text-neutral-800 bg-neutral-100/50 border border-neutral-800/40 focus:border-0  placeholder:text-neutral-700/50"
                 value={typeof value === "boolean" ? String(value) : value ?? ""}
                 onChange={(e) => setInput?.(e.target.value)}
