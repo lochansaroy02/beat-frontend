@@ -47,18 +47,15 @@ export const useQRstore = create<QRStoreProps>((set) => ({
     getQRData: async (pnoNO: string | undefined) => {
         try {
             const response = await axios.get(`${api}/qr/get/${pnoNO}`)
-            console.log(response);
             set({ allQRData: response.data || [] });
             return response
-
         } catch (error) {
-            console.log(error);
+            // console.log(error);
         }
     },
     getAllQR: async () => {
         try {
             const response = await axios.get(`${api}/qr/get-all `)
-            console.log(response.data.data);
             set({
                 allQRData: response.data.data
             })

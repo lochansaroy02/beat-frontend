@@ -45,13 +45,9 @@ const Sidebar = () => {
                                         const targetLink = item.link === '/report' ? '/report/entry-report' : item.link;
                                         router.push(targetLink);
                                     }}
-                                    // 💡 MODIFICATION:
-                                    // 1. Maintain 'bg-green-700' for active state.
-                                    // 2. Add 'hover:bg-green-600' for a nice hover effect on inactive items.
-                                    // 3. Set a specific text color for active and inactive states.
-                                    className={`${isActive ? "bg-green-700" : "bg-neutral-800 hover:bg-neutral-700"} cursor-pointer py-2 px-4 transition-all ease-in-out rounded-lg`}
+                                    className={`${isActive ? "bg-blue" : "bg-neutral-100 hover:bg-blue/10 border border-blue/50"} cursor-pointer py-2 px-4 transition-all ease-in-out rounded-lg`}
                                 >
-                                    <h1 className={`${isActive ? 'text-neutral-200 font-semibold' : 'text-neutral-400'} text-sm`}>{item.name}</h1>
+                                    <h1 className={`${isActive ? 'text-neutral-200 font-semibold' : 'text-neutral-900'} text-sm`}>{item.name}</h1>
                                 </div>
                             );
                         })}

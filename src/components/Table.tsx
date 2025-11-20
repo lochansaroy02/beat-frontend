@@ -3,7 +3,7 @@
 import { useUserStore } from "@/store/userStore";
 import { Person, QRDataItem } from "@/types/type";
 import { cordToAddress } from "@/utils/cordToAddress";
-import { Pencil, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ImageSlider from "./ImageSlider";
@@ -79,7 +79,6 @@ const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTablePr
     }, [personData, qrDataMap]);
 
     const handleEditUser = (data: any) => {
-        // This is for navigating to the user edit page
         setSelectedUser(data);
         route.push('/add-users');
     };
@@ -110,16 +109,21 @@ const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTablePr
 
     if (isLoading && personData.length === 0) {
         return (
-            <div className='w-full h-full p-4 flex items-center justify-center'>
-                <p className='text-center'>Loading person and QR data... Please wait.</p>
+            <div className='w-full h-full p-4 flex  gap-4 items-center justify-center'>
+                <span className="animate-spin">
+                    <Loader2 />
+                </span>
+                <p className='text-center'>
+                    Loading
+                </p>
             </div>
         );
     }
 
-    if (!personData || personData.length === 0) {
+    if (personData.length === 0) {
         return (
             <div className='w-full p-4 '>
-                <p className='text-center'>No results match the current filter or page selection.</p>
+                <p className='text-center'>No data found</p>
             </div>
         );
     }

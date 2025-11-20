@@ -11,7 +11,7 @@ interface PersonProps {
 export const usePersonStore = create<PersonProps>((set) => ({
     personData: [],
     setPersonData: (data: any) => {
-        set({ 
+        set({
             personData: data
         })
     },
@@ -21,6 +21,7 @@ export const usePersonStore = create<PersonProps>((set) => ({
             set({
                 personData: response.data.data
             })
+            console.log(response.data);
         } catch (error) {
             console.error(error);
             return null
