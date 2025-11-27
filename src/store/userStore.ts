@@ -40,7 +40,7 @@ type UpdateUserInput = UserDataInput;
 interface UserProps {
     // State
     userData: UserData[]; // Use the specific type for retrieved data array
-    selectedUser: UserData | null;
+    selectedUser: any | null;
 
     // Actions
     setSelectedUser: (data: UserData | null) => void; // Use specific type

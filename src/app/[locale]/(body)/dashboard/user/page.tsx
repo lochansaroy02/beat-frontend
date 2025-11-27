@@ -3,20 +3,22 @@
 import UserTable from "@/components/Table";
 import DatePicker from "@/components/ui/datePicker";
 import InputComponent from "@/components/ui/InputComponent";
+import { useDebounce } from "@/hooks/useDebounce"; // Import the hook from Step 1
 import { useAuthStore } from "@/store/authStore";
 import { usePersonStore } from "@/store/personStore";
 import { useQRstore } from "@/store/qrStore";
 import { Person, QRDataItem } from "@/types/type";
-import { Download, FileSpreadsheet, X } from "lucide-react";
+import {
+    Download,
+    FileSpreadsheet,
+    LayoutGrid,
+    Loader2,
+    X
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-// --- Utility Definitions ---
-interface TimePhase {
-    label: string;
-    startHour: number;
-    endHour: number;
-}
-
+// --- CONSTANTS (Moved outside component to avoid recreation) ---
+interface TimePhase { label: string; startHour: number; endHour: number; }
 const TIME_PHASES: TimePhase[] = [
     { label: "Day Phase 1 (6AM - 9AM)", startHour: 6, endHour: 9 },
     { label: "Day Phase 2 (9AM - 12PM)", startHour: 9, endHour: 12 },
@@ -28,38 +30,7 @@ const TIME_PHASES: TimePhase[] = [
     { label: "Night Phase 4 (3AM - 6AM)", startHour: 3, endHour: 6 },
 ];
 
-interface ScanSummaryRow {
-    policeStation: string;
-    totalScans: number;
-    [key: string]: string | number;
-}
-
-const convertToCSV = (data: any[], filename: string) => {
-    if (!data || data.length === 0) return;
-    const headers = Object.keys(data[0]);
-    const csvRows = data.map(row =>
-        headers.map(header => {
-            let value = row[header] === undefined || row[header] === null ? '' : String(row[header]);
-            if (value.includes(',') || value.includes('\n') || value.includes('"')) {
-                value = `"${value.replace(/"/g, '""')}"`;
-            }
-            return value;
-        }).join(',')
-    );
-    const csvString = [headers.join(','), ...csvRows].join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-};
-
+// --- HELPER FUNCTIONS ---
 const getTimePhaseLabel = (timeStr: string): string | null => {
     if (!timeStr) return null;
     const parts = timeStr.trim().split(' ');
@@ -68,65 +39,34 @@ const getTimePhaseLabel = (timeStr: string): string | null => {
     const [hourStr] = timePart.split(':');
     let scanHour = parseInt(hourStr, 10);
     if (isNaN(scanHour)) return null;
-
-    if (ampm === 'PM' && scanHour !== 12) {
-        scanHour += 12;
-    } else if (ampm === 'AM' && scanHour === 12) {
-        scanHour = 0;
-    }
-
+    if (ampm === 'PM' && scanHour !== 12) scanHour += 12;
+    else if (ampm === 'AM' && scanHour === 12) scanHour = 0;
     const foundPhase = TIME_PHASES.find(phase => {
-        if (phase.startHour >= phase.endHour) {
-            return scanHour >= phase.startHour || scanHour < phase.endHour;
-        } else {
-            return scanHour >= phase.startHour && scanHour < phase.endHour;
-        }
+        if (phase.startHour >= phase.endHour) return scanHour >= phase.startHour || scanHour < phase.endHour;
+        else return scanHour >= phase.startHour && scanHour < phase.endHour;
     });
     return foundPhase ? foundPhase.label : null;
 };
 
-// --- Filter Logic Helper ---
-const doesScanMatchFilters = (
-    item: QRDataItem,
-    selectedPhase: TimePhase | undefined,
-    selectedStation: string,
-    startDateStr: string | undefined,
-    endDateStr: string | undefined
-): boolean => {
+const doesScanMatchFilters = (item: QRDataItem, selectedPhase: TimePhase | undefined, selectedStation: string, startDateStr: string | undefined, endDateStr: string | undefined): boolean => {
     if (!item.scannedOn) return false;
-
-    // 1. Station Match
     if (selectedStation && item.policeStation !== selectedStation) return false;
-
-    // 2. Time Phase Match
     if (selectedPhase) {
         const parts = item.scannedOn.split(' ');
-        // Join the rest in case of multiple spaces, though usually it's "11:27 PM"
         const timeStr = parts.slice(1).join(' ');
         const phaseLabel = getTimePhaseLabel(timeStr);
         if (phaseLabel !== selectedPhase.label) return false;
     }
-
-    // 3. Date Match
-    // item.scannedOn format: "19-11-2025 11:27 PM" (DD-MM-YYYY)
-    // startDateStr / endDateStr format: "2025-11-19" (YYYY-MM-DD)
     if (startDateStr || endDateStr) {
-        const scanDatePart = item.scannedOn.split(' ')[0]; // Extracts "19-11-2025"
+        const scanDatePart = item.scannedOn.split(' ')[0];
         if (!scanDatePart || !scanDatePart.includes('-')) return false;
-
         const [day, month, year] = scanDatePart.split('-');
-
-        // Reconstruct to YYYY-MM-DD for accurate string comparison
         const scanDateISO = `${year}-${month}-${day}`;
-
         if (startDateStr && scanDateISO < startDateStr) return false;
         if (endDateStr && scanDateISO > endDateStr) return false;
     }
-
     return true;
 };
-
-// -----------------------------------------------------------
 
 const Page = () => {
     const { getPerson, personData } = usePersonStore();
@@ -134,17 +74,19 @@ const Page = () => {
     const { userData, initializeStore, isInitialized } = useAuthStore();
 
     // Data States
-    const [filteredData, setFilteredData] = useState<Person[]>(personData);
     const [qrDataMap, setQrDataMap] = useState<Map<string, QRDataItem[]>>(new Map());
-    const [filteredQrDataMap, setFilteredQrDataMap] = useState<Map<string, QRDataItem[]>>(new Map());
 
+    // UI States
     const [isLoading, setIsLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
-    // Dates should be YYYY-MM-DD strings coming from DatePicker
+    // Search & Filter
+    const [searchQuery, setSearchQuery] = useState("");
+    // OPTIMIZATION 4: Debounce the search (wait 500ms after typing stops)
+    const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
     const [startDate, setStartDate] = useState<string | undefined>(undefined);
     const [endDate, setEndDate] = useState<string | undefined>(undefined);
-
     const [selectedTimePhase, setSelectedTimePhase] = useState<string>("");
     const [selectedPoliceStation, setSelectedPoliceStation] = useState<string>("");
 
@@ -152,89 +94,60 @@ const Page = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(20);
 
-    // Report Modal State
+    // Report Data
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-    const [reportData, setReportData] = useState<ScanSummaryRow[]>([]);
+    const [aggregatedData, setAggregatedData] = useState<any[]>([]);
 
-    // Edit States
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [userToEdit, setUserToEdit] = useState<Person | null>(null);
-
-    const handleEdit = (person: Person) => {
-        setUserToEdit(person);
-        setIsEditModalOpen(true);
-    };
-
+    // --- Data Fetching ---
     const handleGetPersonData = useCallback(async (userId: string | undefined) => {
-        if (userId) {
-            await getPerson(userId);
-        } else {
-            setIsLoading(false);
-        }
+        if (userId) await getPerson(userId);
+        else setIsLoading(false);
     }, [getPerson]);
 
-    useEffect(() => {
-        initializeStore();
-    }, [initializeStore]);
-
+    useEffect(() => { initializeStore(); }, [initializeStore]);
     useEffect(() => {
         if (isInitialized) {
-            if (userData?.id) {
-                handleGetPersonData(userData.id);
-            } else {
-                setIsLoading(false);
-            }
+            if (userData?.id) handleGetPersonData(userData.id);
+            else setIsLoading(false);
         }
     }, [isInitialized, userData?.id, handleGetPersonData]);
 
-    useEffect(() => {
-        setFilteredData(personData);
-    }, [personData]);
-
-    // --- QR Data Fetching ---
-    const fetchQRDataForPerson = useCallback(async (pnoNumber: string): Promise<QRDataItem[]> => {
-        try {
-            const response = await getQRData(pnoNumber);
-            if (response?.data.success) return response.data.data;
-            return [];
-        } catch (error) {
-            return [];
-        }
-    }, [getQRData]);
-
+    // OPTIMIZED: Fetch QR Data logic
     useEffect(() => {
         if (personData && personData.length > 0) {
             const fetchAllQrData = async () => {
                 const personPnos = personData.map(p => p.pnoNo);
                 const pnosToFetch = personPnos.filter(pno => !qrDataMap.has(pno));
 
-                if (pnosToFetch.length === 0 && personData.length === qrDataMap.size) {
+                if (pnosToFetch.length === 0) {
                     setIsLoading(false);
                     return;
                 }
 
                 setIsLoading(true);
                 const newQrDataMapEntries: [string, QRDataItem[]][] = [];
-                const fetchPromises = pnosToFetch.map(async (pnoNo) => {
-                    const data = await fetchQRDataForPerson(pnoNo);
-                    newQrDataMapEntries.push([pnoNo, data]);
-                });
+                // Process in chunks or parallel
+                await Promise.all(pnosToFetch.map(async (pnoNo) => {
+                    try {
+                        const response = await getQRData(pnoNo);
+                        if (response?.data.success) {
+                            newQrDataMapEntries.push([pnoNo, response.data.data]);
+                        }
+                    } catch (e) { console.error(e); }
+                }));
 
-                await Promise.all(fetchPromises);
-
-                setQrDataMap(prevMap => {
-                    const updatedMap = new Map(prevMap);
-                    newQrDataMapEntries.forEach(([pnoNo, data]) => updatedMap.set(pnoNo, data));
-                    return updatedMap;
+                setQrDataMap(prev => {
+                    const next = new Map(prev);
+                    newQrDataMapEntries.forEach(([k, v]) => next.set(k, v));
+                    return next;
                 });
                 setIsLoading(false);
             };
             fetchAllQrData();
-        } else if (personData && personData.length === 0) {
+        } else {
             setIsLoading(false);
         }
-    }, [personData, fetchQRDataForPerson]);
-
+    }, [personData, getQRData]);
 
     const uniquePoliceStations = useMemo(() => {
         const stations = new Set<string>();
@@ -246,11 +159,11 @@ const Page = () => {
         return Array.from(stations).sort();
     }, [qrDataMap]);
 
-    // --- Updated Filtering Logic ---
-    const applyFilters = useCallback(() => {
+    // --- OPTIMIZATION 5: Memoized Filtering ---
+    // Only recalculate when dependencies change, NOT on every render.
+    // Uses debouncedSearchQuery instead of raw searchQuery.
+    const { filteredData, filteredQrDataMap } = useMemo(() => {
         const selectedPhase = TIME_PHASES.find(p => p.label === selectedTimePhase);
-
-        // Check if any filter is active
         const needsScanFiltering = selectedTimePhase || selectedPoliceStation || startDate || endDate;
 
         let nextFilteredPersonData: Person[] = [];
@@ -264,124 +177,97 @@ const Page = () => {
                 const matchingScans = qrList.filter(item =>
                     doesScanMatchFilters(item, selectedPhase, selectedPoliceStation, startDate, endDate)
                 );
-
                 if (matchingScans.length > 0) {
                     nextFilteredQrMap.set(pnoNo, matchingScans);
-
                     const person = personData?.find(p => p.pnoNo === pnoNo);
-                    if (person) {
-                        nextFilteredPersonData.push(person);
-                    }
+                    if (person) nextFilteredPersonData.push(person);
                 }
             }
         }
 
-        if (searchQuery) {
+        if (debouncedSearchQuery) {
+            const lowerQuery = debouncedSearchQuery.toLocaleLowerCase();
             nextFilteredPersonData = nextFilteredPersonData.filter((item) =>
-                item.name.toLocaleLowerCase().includes(searchQuery.toLocaleLowerCase()) ||
-                item.pnoNo.includes(searchQuery)
+                item.name.toLocaleLowerCase().includes(lowerQuery) ||
+                item.pnoNo.includes(lowerQuery)
             );
         }
 
-        setFilteredData(nextFilteredPersonData);
-        setFilteredQrDataMap(nextFilteredQrMap);
-        setCurrentPage(1);
+        return { filteredData: nextFilteredPersonData, filteredQrDataMap: nextFilteredQrMap };
+    }, [personData, qrDataMap, debouncedSearchQuery, selectedTimePhase, selectedPoliceStation, startDate, endDate]);
 
-    }, [personData, qrDataMap, searchQuery, selectedTimePhase, selectedPoliceStation, startDate, endDate]);
+    // Reset pagination when filter changes
+    useEffect(() => { setCurrentPage(1); }, [debouncedSearchQuery, selectedTimePhase, selectedPoliceStation, startDate, endDate]);
 
-    useEffect(() => {
-        applyFilters();
-    }, [applyFilters]);
-
-    // --- Pagination ---
-    const totalItems = filteredData ? filteredData.length : 0;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    // Get current page items
     const currentItems = useMemo(() => {
-        return filteredData ? filteredData.slice().reverse().slice(indexOfFirstItem, indexOfLastItem) : [];
-    }, [filteredData, indexOfFirstItem, indexOfLastItem]);
+        const indexOfLastItem = currentPage * itemsPerPage;
+        const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+        return filteredData.slice().reverse().slice(indexOfFirstItem, indexOfLastItem);
+    }, [filteredData, currentPage, itemsPerPage]);
 
-    const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-    const paginationControls = (
-        <div className="flex justify-between items-center my-4">
-            <button
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="p-2 bg-gray-200 rounded disabled:opacity-50 text-sm"
-            >
-                Previous
-            </button>
-            <span className="text-sm">
-                Page {currentPage} of {totalPages || 1} (Total: {totalItems})
-            </span>
-            <button
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === totalPages || totalItems === 0}
-                className="p-2 bg-gray-200 rounded disabled:opacity-50 text-sm"
-            >
-                Next
-            </button>
-        </div>
-    );
-
-    // --- Report Generation ---
+    // --- OPTIMIZATION 6: Non-Blocking Report Generation ---
     const generateReportData = () => {
-        const stationPhaseCounts = new Map<string, Map<string, number>>();
-        const allStations = new Set<string>();
+        setIsGeneratingReport(true);
 
-        const selectedPhase = TIME_PHASES.find(p => p.label === selectedTimePhase);
+        // setTimeout pushes this expensive task to the end of the browser's todo list.
+        // This allows React to render the "Calculating..." spinner FIRST.
+        setTimeout(() => {
+            const statsMap = new Map<string, { [key: string]: number }>();
+            const selectedPhase = TIME_PHASES.find(p => p.label === selectedTimePhase);
 
-        for (const [, qrData] of filteredQrDataMap.entries()) {
-            qrData.forEach(item => {
-                // Re-check filters to ensure consistency
-                if (doesScanMatchFilters(item, selectedPhase, selectedPoliceStation, startDate, endDate)) {
-                    const station = item.policeStation;
-                    const parts = item.scannedOn.split(' ');
-                    const timeStr = parts.slice(1).join(' ');
-                    const phaseLabel = getTimePhaseLabel(timeStr);
+            for (const qrList of filteredQrDataMap.values()) {
+                qrList.forEach(item => {
+                    if (doesScanMatchFilters(item, selectedPhase, selectedPoliceStation, startDate, endDate)) {
+                        const parts = item.scannedOn.split(' ');
+                        const timeStr = parts.slice(1).join(' ');
+                        const phaseLabel = getTimePhaseLabel(timeStr) || "Unknown";
+                        const station = item.policeStation || "Unknown Station";
 
-                    if (station && phaseLabel) {
-                        allStations.add(station);
-                        if (!stationPhaseCounts.has(station)) {
-                            stationPhaseCounts.set(station, new Map());
-                        }
-                        const phaseCounts = stationPhaseCounts.get(station)!;
-                        phaseCounts.set(phaseLabel, (phaseCounts.get(phaseLabel) || 0) + 1);
+                        if (!statsMap.has(station)) statsMap.set(station, {});
+                        const stationStats = statsMap.get(station)!;
+                        stationStats[phaseLabel] = (stationStats[phaseLabel] || 0) + 1;
                     }
-                }
-            });
-        }
+                });
+            }
 
-        const summaryData: ScanSummaryRow[] = [];
-        const phaseLabels = TIME_PHASES.map(p => p.label);
-
-        for (const station of Array.from(allStations).sort()) {
-            const phaseCounts = stationPhaseCounts.get(station) || new Map<string, number>();
-            let totalScans = 0;
-            const row: ScanSummaryRow = { policeStation: station, totalScans: 0 };
-
-            phaseLabels.forEach(label => {
-                const count = phaseCounts.get(label) || 0;
-                row[label] = count;
-                totalScans += count;
+            const reportData: any[] = [];
+            statsMap.forEach((counts, station) => {
+                const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+                reportData.push({ policeStation: station, counts: counts, total: total });
             });
 
-            row.totalScans = totalScans;
-            summaryData.push(row);
-        }
+            reportData.sort((a, b) => a.policeStation.localeCompare(b.policeStation));
+            setAggregatedData(reportData);
 
-        setReportData(summaryData);
-        setIsReportModalOpen(true);
+            setIsGeneratingReport(false);
+            setIsReportModalOpen(true);
+        }, 100);
     };
 
     const handleDownloadCsv = () => {
-        const filename = `Report_${new Date().toISOString().slice(0, 10)}.csv`;
-        convertToCSV(reportData, filename);
+        if (aggregatedData.length === 0) return;
+        const headerRow = ["Police Station", ...TIME_PHASES.map(p => p.label), "Total Scans"];
+        const rows = aggregatedData.map(row => {
+            const rowData = [`"${row.policeStation}"`, ...TIME_PHASES.map(phase => row.counts[phase.label] || 0), row.total];
+            return rowData.join(",");
+        });
+        const csvString = [headerRow.join(","), ...rows].join("\n");
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const filename = `Station_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     };
 
-
+    const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
     return (
         <div className='w-full p-4 relative'>
@@ -401,9 +287,7 @@ const Page = () => {
                             >
                                 <option value="">All Stations</option>
                                 {uniquePoliceStations.map((station) => (
-                                    <option key={station} value={station}>
-                                        {station}
-                                    </option>
+                                    <option key={station} value={station}>{station}</option>
                                 ))}
                             </select>
                         </div>
@@ -416,9 +300,7 @@ const Page = () => {
                             >
                                 <option value="">All Times</option>
                                 {TIME_PHASES.map((phase) => (
-                                    <option key={phase.label} value={phase.label}>
-                                        {phase.label}
-                                    </option>
+                                    <option key={phase.label} value={phase.label}>{phase.label}</option>
                                 ))}
                             </select>
                         </div>
@@ -429,95 +311,97 @@ const Page = () => {
                     <InputComponent
                         customPlaceholder="Search"
                         value={searchQuery}
-                        setInput={setSearchQuery}
+                        setInput={setSearchQuery} // We update this immediately for the input field...
                         placeholder="Search by name or PNO..."
                     />
+
                     <button
                         onClick={generateReportData}
-                        className="p-2 bg-green-600 flex items-center px-4 gap-2 text-white rounded-md hover:bg-green-700 transition-colors self-end shadow-md"
+                        disabled={isGeneratingReport}
+                        className={`p-2 flex items-center px-4 gap-2 text-white rounded-md transition-colors self-end shadow-md ${isGeneratingReport ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
                     >
-                        <FileSpreadsheet size={18} />
-                        <span className="text-sm font-medium">Generate Report</span>
+                        {isGeneratingReport ? <Loader2 className="animate-spin" size={18} /> : <LayoutGrid size={18} />}
+                        <span className="text-sm font-medium">
+                            {isGeneratingReport ? "Calculating..." : "Generate Matrix Report"}
+                        </span>
                     </button>
                 </div>
             </div>
 
-            {paginationControls}
+            <div className="flex justify-between items-center my-4">
+                <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="p-2 bg-gray-200 rounded disabled:opacity-50 text-sm">Previous</button>
+                <span className="text-sm">Page {currentPage} of {Math.ceil((filteredData ? filteredData.length : 0) / itemsPerPage)}</span>
+                <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === Math.ceil((filteredData ? filteredData.length : 0) / itemsPerPage)} className="p-2 bg-gray-200 rounded disabled:opacity-50 text-sm">Next</button>
+            </div>
 
+            {/* OPTIMIZATION 7: useCallback for prop function */}
             <UserTable
                 personData={currentItems}
                 qrDataMap={filteredQrDataMap}
                 isLoading={isLoading}
-                onEditUser={handleEdit}
+                onEditUser={useCallback(() => { }, [])}
             />
 
-            {paginationControls}
+            <div className="flex justify-between items-center my-4">
+                <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="p-2 bg-gray-200 rounded disabled:opacity-50 text-sm">Previous</button>
+                <span className="text-sm">Page {currentPage}</span>
+                <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === Math.ceil((filteredData ? filteredData.length : 0) / itemsPerPage)} className="p-2 bg-gray-200 rounded disabled:opacity-50 text-sm">Next</button>
+            </div>
 
+            {/* REPORT MODAL */}
             {isReportModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
-                        <div className="flex justify-between items-center p-4 border-b">
-                            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                <FileSpreadsheet className="text-green-600" />
-                                Generated Report Preview
-                            </h2>
-                            <button
-                                onClick={() => setIsReportModalOpen(false)}
-                                className="text-gray-500 hover:text-red-500 transition-colors"
-                            >
-                                <X size={24} />
-                            </button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-[95vw] h-[90vh] flex flex-col overflow-hidden">
+                        <div className="flex justify-between items-center p-5 border-b bg-gray-50">
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                    <LayoutGrid className="text-blue-700" size={28} />
+                                    Station Activity Matrix
+                                </h2>
+                                <p className="text-sm text-gray-500 mt-1">Scan counts by Police Station vs Time Slot</p>
+                            </div>
+                            <button onClick={() => setIsReportModalOpen(false)} className="p-2 bg-white border border-gray-200 rounded-full hover:bg-red-50 hover:text-red-600 transition-colors shadow-sm"><X size={24} /></button>
                         </div>
-
-                        <div className="p-4 overflow-auto z-40 flex-1">
-                            {reportData.length === 0 ? (
-                                <div className="text-center py-10 text-gray-500">
-                                    No data found for the selected filters.
+                        <div className="flex-1 overflow-auto bg-white">
+                            {aggregatedData.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                                    <FileSpreadsheet size={48} className="mb-4 opacity-50" />
+                                    <p className="text-lg font-medium">No records found matching filters.</p>
                                 </div>
                             ) : (
-                                <table className="min-w-full border-collapse border border-gray-300 text-sm">
-                                    <thead className="bg-gray-100 sticky top-0 z-10">
+                                <table className="w-full text-sm text-left border-collapse">
+                                    <thead className="bg-gray-100 text-gray-700 font-semibold border-b sticky top-0 z-10 shadow-sm">
                                         <tr>
-                                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-700">Police Station</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-center font-bold text-blue-700">Total Scans</th>
-                                            {TIME_PHASES.map(p => (
-                                                <th key={p.label} className="border border-gray-300 px-2 py-2 text-center font-medium text-gray-600 text-xs">
-                                                    {p.label.replace("Phase ", "")}
-                                                </th>
+                                            <th className="px-4 py-3 border-r bg-gray-200 min-w-[200px] sticky left-0 z-20">Police Station</th>
+                                            {TIME_PHASES.map((phase) => (
+                                                <th key={phase.label} className="px-2 py-3 text-center border-r min-w-[120px] whitespace-normal text-xs">{phase.label.replace("Phase", "Ph")}</th>
                                             ))}
+                                            <th className="px-4 py-3 text-center bg-blue-50 font-bold min-w-[80px]">Total</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {reportData.map((row, idx) => (
-                                            <tr key={idx} className="hover:bg-gray-50 transition-colors even:bg-gray-50">
-                                                <td className="border border-gray-300 px-4 py-2 font-medium text-gray-800">{row.policeStation}</td>
-                                                <td className="border border-gray-300 px-4 py-2 text-center font-bold text-blue-600">{row.totalScans}</td>
-                                                {TIME_PHASES.map(p => (
-                                                    <td key={p.label} className={`border border-gray-300 px-2 py-2 text-center ${Number(row[p.label]) > 0 ? 'text-green-700 font-bold bg-green-50' : 'text-gray-400'}`}>
-                                                        {row[p.label]}
-                                                    </td>
-                                                ))}
+                                    <tbody className="divide-y divide-gray-200">
+                                        {aggregatedData.map((row, idx) => (
+                                            <tr key={idx} className="hover:bg-blue-50 transition-colors">
+                                                <td className="px-4 py-2 font-medium text-gray-900 border-r bg-gray-50 sticky left-0 z-10">{row.policeStation}</td>
+                                                {TIME_PHASES.map((phase) => {
+                                                    const count = row.counts[phase.label] || 0;
+                                                    return (
+                                                        <td key={phase.label} className={`px-2 py-2 text-center border-r ${count > 0 ? 'text-gray-900 font-medium' : 'text-gray-300'}`}>
+                                                            {count > 0 ? count : "-"}
+                                                        </td>
+                                                    );
+                                                })}
+                                                <td className="px-4 py-2 text-center font-bold text-blue-700 bg-blue-50/50">{row.total}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             )}
                         </div>
-
-                        <div className="p-4 border-t bg-gray-50 flex justify-end gap-4 rounded-b-lg">
-                            <button
-                                onClick={() => setIsReportModalOpen(false)}
-                                className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-md transition-colors"
-                            >
-                                Close
-                            </button>
-                            <button
-                                onClick={handleDownloadCsv}
-                                disabled={reportData.length === 0}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                            >
-                                <Download size={16} />
-                                Download CSV
+                        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+                            <button onClick={() => setIsReportModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-colors border border-gray-300 bg-white">Close</button>
+                            <button onClick={handleDownloadCsv} disabled={aggregatedData.length === 0} className="px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+                                <Download size={18} /> Export CSV
                             </button>
                         </div>
                     </div>

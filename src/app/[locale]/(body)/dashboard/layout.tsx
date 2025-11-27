@@ -40,8 +40,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return `
             flex-1 text-center py-3 px-6 rounded-lg transition-all duration-200 font-medium whitespace-nowrap mb-2 sm:mb-0
             ${isActive
-                ? 'bg-indigo-600 text-white shadow-md' // Active: Solid color, White Text
-                : 'bg-transparent text-gray-600 hover:text-indigo-600 hover:bg-gray-50' // Inactive: Gray text, subtle hover
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'bg-transparent text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
             }
             sm:flex-none sm:w-auto
         `;

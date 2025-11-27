@@ -1,17 +1,19 @@
 "use client";
 
-import { useUserStore } from "@/store/userStore";
 import { Person, QRDataItem } from "@/types/type";
 import { cordToAddress } from "@/utils/cordToAddress";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import {
+    ChevronDown,
+    ChevronUp,
+    Loader2,
+    MapPin,
+    Pencil,
+    Shield
+} from "lucide-react";
+import { memo, useEffect, useState } from "react"; // OPTIMIZATION: Import memo
 import ImageSlider from "./ImageSlider";
 
-// Define a type for a single QR scan record for better clarity
-type QrScanData = QRDataItem;
-
-// Update the props type
+// --- Types ---
 type UserTableProps = {
     personData: Person[],
     qrDataMap: Map<string, QRDataItem[]>,
@@ -19,212 +21,181 @@ type UserTableProps = {
     onEditUser: (person: Person) => void;
 }
 
+// --- OPTIMIZATION 1: Isolated Location Component ---
+// This component manages its own state. When it updates, only this tiny <span> re-renders, 
+// not the whole table.
+const LocationCell = memo(({ lat, long, initialLocation }: { lat?: string, long?: string, initialLocation?: string }) => {
+    const [address, setAddress] = useState<string>(initialLocation || "");
+    const [loading, setLoading] = useState(false);
 
-const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTableProps) => {
-
-    const route = useRouter();
-    const { setSelectedUser } = useUserStore();
-
-    // Local state for geocoded addresses for the current page's personnel
-    const [addressMap, setAddressMap] = useState<Map<string, string>>(new Map());
-
-    // Effect to handle geocoding only for the visible personnel
     useEffect(() => {
-        if (personData.length === 0) {
-            setAddressMap(new Map());
-            return;
+        // If we already have an address from the DB, stop here.
+        if (initialLocation && initialLocation.length > 5) return;
+
+        if (lat && long) {
+            setLoading(true);
+            // OPTIMIZATION: Stagger requests. 
+            // Add a random delay (0-1s) so we don't hit the API 20 times in 1 millisecond.
+            const delay = Math.random() * 1000;
+
+            const timeout = setTimeout(() => {
+                cordToAddress(lat, long)
+                    .then((fetchedAddress) => {
+                        if (fetchedAddress) setAddress(fetchedAddress);
+                    })
+                    .catch(() => setAddress("Loc failed"))
+                    .finally(() => setLoading(false));
+            }, delay);
+
+            return () => clearTimeout(timeout);
         }
+    }, [lat, long, initialLocation]);
 
-        const fetchAddressesForVisible = async () => {
-            const newAddressMap = new Map<string, string>();
-            const addressPromises: Promise<void>[] = [];
+    if (loading) return <span className="text-xs text-blue-400 animate-pulse">Resolving...</span>;
 
-            for (const person of personData) {
-                const pnoNo = person.pnoNo;
-                const qrData = qrDataMap.get(pnoNo);
-                // Get the last scan for this person
-                const lastScan = qrData && qrData.length > 0 ? qrData[qrData.length - 1] : null;
-
-                const existingAddress = addressMap.get(pnoNo);
-                if (existingAddress && existingAddress !== 'Fetching Address...') {
-                    newAddressMap.set(pnoNo, existingAddress);
-                    continue;
-                }
-
-                // Check for existence of lat/long before attempting geocoding
-                if (lastScan && lastScan.lattitude && lastScan.longitude) {
-                    newAddressMap.set(pnoNo, 'Fetching Address...');
-
-                    const promise = cordToAddress(lastScan.lattitude, lastScan.longitude)
-                        .then(address => {
-                            newAddressMap.set(pnoNo, address || 'Address N/A');
-                        }).catch(e => {
-                            newAddressMap.set(pnoNo, 'Error Fetching Address');
-                        });
-                    addressPromises.push(promise);
-                } else {
-                    newAddressMap.set(pnoNo, 'N/A');
-                }
-            }
-
-            if (addressPromises.length > 0) {
-                await Promise.all(addressPromises);
-            }
-
-            setAddressMap(prevMap => new Map([...prevMap, ...newAddressMap]));
-        };
-
-        fetchAddressesForVisible();
-
-    }, [personData, qrDataMap]);
-
-    const handleEditUser = (data: any) => {
-        setSelectedUser(data);
-        route.push('/add-users');
-    };
-
-    const handleDelete = (personId: string, scanId?: string) => {
-        if (window.confirm(`Are you sure you want to delete this ${scanId ? 'scan record' : 'person record'}?`)) {
-            console.log(`Delete requested for Person ID: ${personId}, Scan ID: ${scanId || 'N/A'}`);
-            // TODO: Implement actual delete API call logic here
-        }
-    };
-
-    // Function to render the Name cell content (including the Edit button)
-    const renderNameCell = (person: Person) => (
-        <div className="flex items-center justify-between gap-2">
-            <span className="font-semibold">{person.name}</span>
-            <button
-                // Calls the edit handler passed down from the parent dashboard
-                onClick={() => onEditUser(person)}
-                className="text-blue-600 hover:text-blue-900 p-1 rounded transition-colors"
-                title="Edit User Details"
-            >
-                <Pencil className="w-4 h-4" />
-            </button>
+    return (
+        <div className="flex items-start gap-2 min-w-[200px]">
+            <MapPin size={16} className="text-red-500 mt-1 shrink-0" />
+            <span className="text-sm text-gray-700 break-words line-clamp-2" title={address}>
+                {address || "Location N/A"}
+            </span>
         </div>
     );
+});
+LocationCell.displayName = "LocationCell";
 
-    // --- Loading and Empty State ---
+// --- OPTIMIZATION 2: Memoized Accordion Row ---
+// Wrapped in 'memo'. If props (person/scans) don't change, React skips rendering this entirely.
+const PersonAccordion = memo(({
+    person,
+    scans,
+    onEdit
+}: {
+    person: Person,
+    scans: QRDataItem[],
+    onEdit: (p: Person) => void
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const totalScans = scans.length;
 
+    return (
+        <div className="border border-gray-200 rounded-lg mb-4 bg-white shadow-sm overflow-hidden content-visibility-auto">
+            {/* content-visibility-auto: Browser won't paint this if it's off-screen */}
+
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full bg-gray-50 p-4 cursor-pointer flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 select-none"
+            >
+                <div className="flex items-start gap-3 w-full lg:w-auto">
+                    <div className={`mt-1 p-2 rounded-full ${isOpen ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 border border-gray-200'} transition-colors`}>
+                        {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1 flex-wrap">
+                            <h3 className="font-bold text-gray-800 text-lg">{person.name}</h3>
+                            <span className="text-xs font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded border border-blue-200">
+                                {person.pnoNo}
+                            </span>
+                            <div className="flex gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                                <button onClick={() => onEdit(person)} className="p-1 hover:bg-blue-100 rounded text-blue-600">
+                                    <Pencil size={14} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="text-sm text-gray-500 flex flex-wrap gap-x-6 gap-y-1">
+                            <span className="flex items-center gap-1">
+                                <Shield size={14} className="text-gray-400" />
+                                CO: <span className="font-semibold text-gray-700">{(person as any).co || "N/A"}</span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                                <MapPin size={14} className="text-gray-400" />
+                                Station: <span className="font-semibold text-gray-700">{(person as any).policeStation || "N/A"}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-4 self-end lg:self-auto w-full lg:w-auto justify-end">
+                    <div className="text-center px-4 py-2 bg-white border border-gray-200 rounded-lg min-w-[100px]">
+                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total Scans</div>
+                        <div className="text-xl font-bold text-blue-600">{totalScans}</div>
+                    </div>
+                </div>
+            </div>
+
+            {isOpen && (
+                <div className="border-t border-gray-200 bg-white">
+                    {scans.length === 0 ? (
+                        <div className="p-8 text-center text-gray-400 italic">No scan history available.</div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-100 text-gray-600 font-semibold border-b border-gray-200 uppercase text-xs tracking-wider">
+                                    <tr>
+                                        <th className="px-4 py-3 min-w-[250px]">Location</th>
+                                        <th className="px-4 py-3 whitespace-nowrap">Time</th>
+                                        <th className="px-4 py-3">Station</th>
+                                        <th className="px-4 py-3">Duty Point</th>
+                                        <th className="px-4 py-3 text-center">Images</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {scans.map((scan, idx) => (
+                                        <tr key={scan.id || idx} className="hover:bg-blue-50/30 transition-colors">
+                                            <td className="px-4 py-3">
+                                                {/* Using the Optimized Location Cell */}
+                                                <LocationCell
+                                                    lat={scan.lattitude}
+                                                    long={scan.longitude}
+                                                    initialLocation={(scan as any).location || (scan as any).address}
+                                                />
+                                            </td>
+                                            <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{scan.scannedOn}</td>
+                                            <td className="px-4 py-3 text-gray-600">{scan.policeStation || "-"}</td>
+                                            <td className="px-4 py-3">{scan.dutyPoint || "N/A"}</td>
+                                            <td className="px-4 py-3 text-center">
+                                                <div className="flex justify-center"><ImageSlider photos={person.photos} /></div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+});
+PersonAccordion.displayName = "PersonAccordion";
+
+// --- MAIN COMPONENT ---
+const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTableProps) => {
     if (isLoading && personData.length === 0) {
         return (
-            <div className='w-full h-full p-4 flex  gap-4 items-center justify-center'>
-                <span className="animate-spin">
-                    <Loader2 />
-                </span>
-                <p className='text-center'>
-                    Loading
-                </p>
+            <div className='w-full h-64 flex flex-col gap-4 items-center justify-center text-gray-500'>
+                <Loader2 className="animate-spin text-blue-600" size={32} />
+                <p>Loading data...</p>
             </div>
         );
     }
 
     if (personData.length === 0) {
-        return (
-            <div className='w-full p-4 '>
-                <p className='text-center'>No data found</p>
-            </div>
-        );
+        return <div className='w-full p-8 text-center text-gray-400'>No records found.</div>;
     }
 
     return (
-        <div className="overflow-x-auto shadow-lg rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr No.</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PNO No.</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location (Address)</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scanned On</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Police Station</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duty Point</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Images</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {
-                        personData.map((person: Person, index: number) => {
-                            // Safely retrieve and cast QR data
-                            const personQrData: QrScanData[] = (qrDataMap.get(person.pnoNo) || []) as QrScanData[];
-                            const scanCount = personQrData.length;
-                            const address = addressMap.get(person.pnoNo) || (scanCount > 0 ? 'Fetching Address...' : 'N/A');
-
-                            if (scanCount === 0) {
-                                // CASE 1: No scan data found
-                                return (
-                                    <tr key={person.id || index} className='hover:bg-gray-100 transition-colors bg-red-50/50'>
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{index + 1}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">{renderNameCell(person)}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">{person.pnoNo}</td>
-                                        <td className="px-6 py-4 whitespace-normal text-sm text-gray-700">{address}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">Never Scanned</td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">N/A</td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">N/A</td>
-                                        <td className="px-6 py-4"><ImageSlider photos={person.photos} /></td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">
-                                            <button
-                                                onClick={() => handleDelete(person.id!)}
-                                                className="text-red-600 hover:text-red-900 p-1 rounded transition-colors"
-                                                title="Delete Person Record (No Scans)"
-                                            >
-                                                <Trash2 className="w-5 h-5" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            }
-
-                            // CASE 2: Scan data exists (render multiple rows with rowSpan)
-                            return personQrData.map((scan: QrScanData, scanIndex: number) => {
-                                return (
-                                    <tr key={`${person.id}-${scan.id || scanIndex}`} className='hover:bg-gray-100 transition-colors'>
-
-                                        {/* RowSpan Columns (Only render these on the FIRST row) */}
-                                        {scanIndex === 0 && (
-                                            <>
-                                                <td rowSpan={scanCount} className="px-6 py-4 text-sm font-medium text-gray-900 border-r border-gray-200">{index + 1}</td>
-                                                <td rowSpan={scanCount} className="px-6 py-4 text-sm text-gray-700 border-r border-gray-200">
-                                                    {renderNameCell(person)}
-                                                </td>
-                                                <td rowSpan={scanCount} className="px-6 py-4 text-sm text-gray-700 border-r border-gray-200">{person.pnoNo}</td>
-                                                <td rowSpan={scanCount} className="px-6 py-4 whitespace-normal text-sm text-gray-700 border-r border-gray-200">{address}</td>
-                                            </>
-                                        )}
-
-                                        {/* Scan-specific data */}
-                                        <td className="px-6 py-4 text-sm text-gray-700">{scan.scannedOn || 'N/A'}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">{scan.policeStation || 'N/A'}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">{scan.dutyPoint || 'N/A'}</td>
-
-                                        {/* Images (RowSpan) - Only on the first row */}
-                                        {scanIndex === 0 && (
-                                            <td rowSpan={scanCount} className="px-6 py-4 border-l border-gray-200">
-                                                <ImageSlider photos={person.photos} />
-                                            </td>
-                                        )}
-
-                                        {/* Actions Column (Scan-specific Deletion) */}
-                                        <td className="px-6 py-4 text-sm text-gray-700">
-                                            <button
-                                                onClick={() => handleDelete(person.id!, scan.id)}
-                                                className="text-red-600 hover:text-red-900 p-1 rounded transition-colors"
-                                                title="Delete Scan Record"
-                                            >
-                                                <Trash2 className="w-5 h-5" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                )
-                            })
-                        })
-                    }
-                </tbody>
-            </table>
+        <div className="flex flex-col gap-2 pb-10">
+            {personData.map((person) => (
+                <PersonAccordion
+                    key={person.id}
+                    person={person}
+                    scans={qrDataMap.get(person.pnoNo) || []}
+                    onEdit={onEditUser}
+                />
+            ))}
         </div>
-    )
-}
+    );
+};
 
-export default UserTable;
+// OPTIMIZATION 3: Memoize the entire table
+export default memo(UserTable);
