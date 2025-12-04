@@ -9,6 +9,7 @@ import { usePersonStore } from "@/store/personStore";
 import { useQRstore } from "@/store/qrStore";
 import { Person, QRDataItem } from "@/types/type";
 import {
+    ClipboardList,
     Download,
     FileSpreadsheet,
     LayoutGrid,
@@ -320,9 +321,9 @@ const Page = () => {
                         disabled={isGeneratingReport}
                         className={`p-2 flex items-center px-4 gap-2 text-white rounded-md transition-colors self-end shadow-md ${isGeneratingReport ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
                     >
-                        {isGeneratingReport ? <Loader2 className="animate-spin" size={18} /> : <LayoutGrid size={18} />}
+                        {isGeneratingReport ? <Loader2 className="animate-spin" size={18} /> : <ClipboardList size={18} />}
                         <span className="text-sm font-medium">
-                            {isGeneratingReport ? "Calculating..." : "Generate Matrix Report"}
+                            {isGeneratingReport ? "Calculating..." : "Generate  Report"}
                         </span>
                     </button>
                 </div>

@@ -102,20 +102,39 @@ const Page = () => {
 
     const catagoryArr = [
         {
-            label: "tyubwell chori", value: "tubwell",
+            label: "Bank", value: "bank",
 
         },
         {
-            label: "transformer Chori", value: "transformer",
-
-        },
-        {
-            label: "vehicle chori", value: "vehicle",
+            label: "Patrol Pump", value: "petrolPump",
 
         },
         {
             label: "HS satyapan", value: "satyapan",
 
+        },
+        {
+            label: "Gaushala", value: "gaushala",
+
+        },
+        {
+            label: "Tubewell", value: "tubewell",
+
+        },
+        {
+            label: "Religious Places", value: "religiousPlaces",
+
+        },
+        {
+            label: "Sarafa", value: "sarafa",
+
+        },
+        {
+            label: "wine shop", value: "wineShop",
+
+        },
+        {
+            label: "Mafiya/ Nakabjan/ Taska", value: "mafia",
         },
 
     ]
