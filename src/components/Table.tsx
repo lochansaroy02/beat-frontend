@@ -10,7 +10,7 @@ import {
     Pencil,
     Shield
 } from "lucide-react";
-import { memo, useEffect, useState } from "react"; // OPTIMIZATION: Import memo
+import { memo, useEffect, useState } from "react";
 import ImageSlider from "./ImageSlider";
 
 // --- Types ---
@@ -22,20 +22,15 @@ type UserTableProps = {
 }
 
 // --- OPTIMIZATION 1: Isolated Location Component ---
-// This component manages its own state. When it updates, only this tiny <span> re-renders, 
-// not the whole table.
 const LocationCell = memo(({ lat, long, initialLocation }: { lat?: string, long?: string, initialLocation?: string }) => {
     const [address, setAddress] = useState<string>(initialLocation || "");
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        // If we already have an address from the DB, stop here.
         if (initialLocation && initialLocation.length > 5) return;
 
         if (lat && long) {
             setLoading(true);
-            // OPTIMIZATION: Stagger requests. 
-            // Add a random delay (0-1s) so we don't hit the API 20 times in 1 millisecond.
             const delay = Math.random() * 1000;
 
             const timeout = setTimeout(() => {
@@ -65,7 +60,6 @@ const LocationCell = memo(({ lat, long, initialLocation }: { lat?: string, long?
 LocationCell.displayName = "LocationCell";
 
 // --- OPTIMIZATION 2: Memoized Accordion Row ---
-// Wrapped in 'memo'. If props (person/scans) don't change, React skips rendering this entirely.
 const PersonAccordion = memo(({
     person,
     scans,
@@ -76,12 +70,9 @@ const PersonAccordion = memo(({
     onEdit: (p: Person) => void
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const totalScans = scans.length;
 
     return (
         <div className="border border-gray-200 rounded-lg mb-4 bg-white shadow-sm overflow-hidden content-visibility-auto">
-            {/* content-visibility-auto: Browser won't paint this if it's off-screen */}
-
             <div
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full bg-gray-50 p-4 cursor-pointer flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 select-none"
@@ -114,10 +105,14 @@ const PersonAccordion = memo(({
                         </div>
                     </div>
                 </div>
+
+                {/* --- UPDATED SECTION: Using person.totalCount --- */}
                 <div className="flex gap-4 self-end lg:self-auto w-full lg:w-auto justify-end">
                     <div className="text-center px-4 py-2 bg-white border border-gray-200 rounded-lg min-w-[100px]">
                         <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total Scans</div>
-                        <div className="text-xl font-bold text-blue-600">{totalScans}</div>
+                        <div className="text-xl font-bold text-blue-600">
+                            {(person as any).totalCount ?? 0}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -142,7 +137,6 @@ const PersonAccordion = memo(({
                                     {scans.map((scan, idx) => (
                                         <tr key={scan.id || idx} className="hover:bg-blue-50/30 transition-colors">
                                             <td className="px-4 py-3">
-                                                {/* Using the Optimized Location Cell */}
                                                 <LocationCell
                                                     lat={scan.lattitude}
                                                     long={scan.longitude}
@@ -153,7 +147,9 @@ const PersonAccordion = memo(({
                                             <td className="px-4 py-3 text-gray-600">{scan.policeStation || "-"}</td>
                                             <td className="px-4 py-3">{scan.dutyPoint || "N/A"}</td>
                                             <td className="px-4 py-3 text-center">
-                                                <div className="flex justify-center"><ImageSlider photos={person.photos} /></div>
+                                                <div className="flex justify-center">
+                                                    <ImageSlider photos={person.photos} />
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -197,5 +193,4 @@ const UserTable = ({ personData, qrDataMap, isLoading, onEditUser }: UserTablePr
     );
 };
 
-// OPTIMIZATION 3: Memoize the entire table
 export default memo(UserTable);

@@ -81,9 +81,9 @@ const Page = () => {
             longitude: long,
             policeStation: policeStation,
             dutyPoint: dutyPoint,
-            cug: cug
+            cug: cug,
+            catagory: catagory
         };
-
 
         try {
             const url = await generateQrcode(sentData);
@@ -202,7 +202,10 @@ const Page = () => {
                     setInput={setDutyPoint}
                 />
 
-                <DropDown options={catagoryArr} selectedValue={catagory} handleSelect={setCatagory} />
+                <div>
+                    <label className="w-1/3 text-[14px] text-nowrap text-neutral-800" htmlFor="">Catagory</label>
+                    <DropDown options={catagoryArr} selectedValue={catagory} handleSelect={setCatagory} />
+                </div>
                 <div className="flex  justify-center">
                     <Button onClick={handleGenerate}>Generate Single QR</Button>
                 </div>

@@ -55,7 +55,7 @@ export const useQRstore = create<QRStoreProps>((set) => ({
     },
     getAllQR: async () => {
         try {
-            const response = await axios.get(`${api}/qr/get-all `)
+            const response = await axios.get(`${api}/qr/get-all`)
             set({
                 allQRData: response.data.data
             })

@@ -30,6 +30,6 @@
     ".next/types/**/*.ts",
     "src/app/(body)/barcode/(data)/parseBarcodeData.ts",
     "migrate.ts"
-  ],
+, "../type.ts"  ],
   "exclude": ["node_modules"]
 }

@@ -21,7 +21,7 @@ export const usePersonStore = create<PersonProps>((set) => ({
             set({
                 personData: response.data.data
             })
-            console.log(response.data);
+
         } catch (error) {
             console.error(error);
             return null
