@@ -41,7 +41,7 @@ const ImageSlider = ({ photos }: { photos: Photo[] }) => {
             minute: '2-digit'
         });
     };
-
+    console.log(photos);
     return (
         <div className="flex flex-col items-center gap-2">
             {/* Image Container */}
@@ -88,6 +88,7 @@ const ImageSlider = ({ photos }: { photos: Photo[] }) => {
             <div className="flex items-center gap-1 text-gray-500">
                 <Calendar size={12} />
                 <span className="text-[10px] font-medium">
+
                     {currentPhoto?.createdAt ? formatDate(currentPhoto.createdAt) : "Date N/A"}
                 </span>
             </div>

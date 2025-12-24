@@ -84,7 +84,7 @@ export const useUserStore = create<UserProps>((set, get) => ({
             // FIX: Using the correct 'api' constant defined at the top
             const response = await axios.get(`${api}/admin/get-users/${adminId}`);
             const fetchedData: UserData[] = response.data.data;
-
+            console.log(fetchedData);
             set({
                 userData: fetchedData
             });

@@ -1,6 +1,4 @@
 "use client";
-
-import { Person, QRDataItem } from "@/types/type";
 import { cordToAddress } from "@/utils/cordToAddress";
 import {
     ChevronDown,
@@ -15,10 +13,10 @@ import ImageSlider from "./ImageSlider";
 
 // --- Types ---
 type UserTableProps = {
-    personData: Person[],
-    qrDataMap: Map<string, QRDataItem[]>,
+    personData: any[],
+    qrDataMap: Map<string, any[]>,
     isLoading: boolean,
-    onEditUser: (person: Person) => void;
+    onEditUser: (person: any) => void;
 }
 
 // --- OPTIMIZATION 1: Isolated Location Component ---
@@ -65,9 +63,9 @@ const PersonAccordion = memo(({
     scans,
     onEdit
 }: {
-    person: Person,
-    scans: QRDataItem[],
-    onEdit: (p: Person) => void
+    person: any,
+    scans: any[],
+    onEdit: (p: any) => void
 }) => {
     const [isOpen, setIsOpen] = useState(false);
 

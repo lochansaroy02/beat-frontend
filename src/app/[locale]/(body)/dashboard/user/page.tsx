@@ -7,7 +7,6 @@ import { useDebounce } from "@/hooks/useDebounce"; // Import the hook from Step 
 import { useAuthStore } from "@/store/authStore";
 import { usePersonStore } from "@/store/personStore";
 import { useQRstore } from "@/store/qrStore";
-import { Person, QRDataItem } from "@/types/type";
 import {
     ClipboardList,
     Download,
@@ -49,7 +48,7 @@ const getTimePhaseLabel = (timeStr: string): string | null => {
     return foundPhase ? foundPhase.label : null;
 };
 
-const doesScanMatchFilters = (item: QRDataItem, selectedPhase: TimePhase | undefined, selectedStation: string, startDateStr: string | undefined, endDateStr: string | undefined): boolean => {
+const doesScanMatchFilters = (item: any, selectedPhase: TimePhase | undefined, selectedStation: string, startDateStr: string | undefined, endDateStr: string | undefined): boolean => {
     if (!item.scannedOn) return false;
     if (selectedStation && item.policeStation !== selectedStation) return false;
     if (selectedPhase) {
@@ -75,7 +74,7 @@ const Page = () => {
     const { userData, initializeStore, isInitialized } = useAuthStore();
 
     // Data States
-    const [qrDataMap, setQrDataMap] = useState<Map<string, QRDataItem[]>>(new Map());
+    const [qrDataMap, setQrDataMap] = useState<Map<string, any[]>>(new Map());
 
     // UI States
     const [isLoading, setIsLoading] = useState(true);
@@ -126,7 +125,7 @@ const Page = () => {
                 }
 
                 setIsLoading(true);
-                const newQrDataMapEntries: [string, QRDataItem[]][] = [];
+                const newQrDataMapEntries: [string, any[]][] = [];
                 // Process in chunks or parallel
                 await Promise.all(pnosToFetch.map(async (pnoNo) => {
                     try {
@@ -167,8 +166,8 @@ const Page = () => {
         const selectedPhase = TIME_PHASES.find(p => p.label === selectedTimePhase);
         const needsScanFiltering = selectedTimePhase || selectedPoliceStation || startDate || endDate;
 
-        let nextFilteredPersonData: Person[] = [];
-        let nextFilteredQrMap = new Map<string, QRDataItem[]>();
+        let nextFilteredPersonData: any[] = [];
+        let nextFilteredQrMap = new Map<string, any[]>();
 
         if (!needsScanFiltering) {
             nextFilteredPersonData = [...(personData || [])];
