@@ -7,7 +7,7 @@ import { useState } from 'react';
 interface Photo {
     url: string;
     userId: string;
-    createdAt: string | Date;
+    clickedOn: string | Date;
 }
 
 const ImageSlider = ({ photos }: { photos: Photo[] }) => {
@@ -41,7 +41,7 @@ const ImageSlider = ({ photos }: { photos: Photo[] }) => {
             minute: '2-digit'
         });
     };
-    console.log(photos);
+
     return (
         <div className="flex flex-col items-center gap-2">
             {/* Image Container */}
@@ -89,7 +89,7 @@ const ImageSlider = ({ photos }: { photos: Photo[] }) => {
                 <Calendar size={12} />
                 <span className="text-[10px] font-medium">
 
-                    {currentPhoto?.createdAt ? formatDate(currentPhoto.createdAt) : "Date N/A"}
+                    {currentPhoto?.clickedOn ? formatDate(currentPhoto.clickedOn) : "Date N/A"}
                 </span>
             </div>
         </div>

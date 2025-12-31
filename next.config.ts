@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+
     ],
   },
   typescript: {

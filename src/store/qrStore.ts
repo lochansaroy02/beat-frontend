@@ -14,7 +14,7 @@ interface QrProps {
 interface QRStoreProps {
     allQRData: any[]
     createQR: (data: QrProps) => Promise<any>
-    getQRData: (userId: string | undefined) => Promise<any>
+    getQRData: (pnoNo: string | undefined) => Promise<any>
     getAllQR: () => Promise<any>
     createBulkQR: (data: QrProps[]) => Promise<any>
     deleteQR: (qrId: string | undefined) => Promise<any>
@@ -46,11 +46,13 @@ export const useQRstore = create<QRStoreProps>((set) => ({
     },
     getQRData: async (pnoNO: string | undefined) => {
         try {
-            const response = await axios.get(`${api}/qr/get/${pnoNO}`)
-            set({ allQRData: response.data || [] });
-            return response
+            const response = await axios.get(`${api}/qr/get/${pnoNO}`);
+            // response.data is the { success: true, data: [...] } object from Express
+            set({ allQRData: response.data.data || [] });
+            return response.data; // Return the body, not the whole axios object
         } catch (error) {
-            // console.log(error);
+            console.error("Error getting data", error);
+            return null;
         }
     },
     getAllQR: async () => {

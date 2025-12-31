@@ -202,7 +202,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
             }
         }
     };
-    
+
 
     const handleDelete = async (selectedIds) => {
         if (selectedIds.length === 0) return;

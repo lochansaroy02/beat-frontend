@@ -5,211 +5,169 @@ import DropDown from "@/components/ui/DropDown";
 import InputComponent from "@/components/ui/InputComponent";
 import { useAuthStore, USER_DATA_KEY } from "@/store/authStore";
 import { useUserStore } from "@/store/userStore";
+import { Loader2 } from "lucide-react"; // Assuming you use lucide-react for icons
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import CreateUsers from "./CreateUsers";
 
-// Define the interface for bulk user data (must match the modal's ExcelUserData)
-interface BulkUserData {
-    name: string;
-    pnoNo: string;
-    password: string;
-    co: string,
-    policeStation: string
-}
 
 const CreateUsersPage = () => {
-    // --- State and Store Hooks ---
-    const { userData } = useAuthStore()
-    const [name, setName] = useState<string>("")
-    const [pnoNo, setPnoNo] = useState<string>("")
-    const [co, setCO] = useState<string>("")
-    const [policeStation, setPoliceStation] = useState<string>("")
-    const [password, setPassword] = useState<string>("")
-    const [isModalOpen, setIsModalOpen] = useState(false) // State for modal visibility
+    const { userData } = useAuthStore();
+    const [name, setName] = useState<string>("");
+    const [pnoNo, setPnoNo] = useState<string>("");
+    const [co, setCO] = useState<string>("");
+    const [policeStation, setPoliceStation] = useState<string>("");
+    const [password, setPassword] = useState<string>("");
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // NOTE: Assuming useUserStore was updated to use 'createUserOrBulk'
-    // If not, you must rename 'createUsers' to 'createUserOrBulk' in your store
-    const { createUsers } = useUserStore()
-    const { selectedUser, updateUser } = useUserStore()
+    // Added loading state
+    const [isLoading, setIsLoading] = useState(false);
 
-
-
+    const { createUsers, selectedUser, updateUser } = useUserStore();
 
     const populateForm = () => {
         if (selectedUser) {
-            setName(selectedUser.name)
-            setPnoNo(selectedUser.pnoNo)
+            setName(selectedUser.name);
+            setPnoNo(selectedUser.pnoNo);
+            // Optionally populate co and policeStation if they exist on selectedUser
+            setCO(selectedUser.co || "");
+            setPoliceStation(selectedUser.policeStation || "");
+        }
+    };
 
-        }
-    }
-    // --- Helper to get Admin ID ---
     const getAdminId = (): string | undefined => {
-        // Ensure this key matches your actual localStorage key
-        const admin = localStorage.getItem(USER_DATA_KEY)
-        if (!admin) {
-            return undefined
-        }
+        const admin = localStorage.getItem(USER_DATA_KEY);
+        if (!admin) return undefined;
         try {
-            const parsedData = JSON.parse(admin)
-            // Assuming the ID is directly on the user data object
-            return parsedData?.id
+            const parsedData = JSON.parse(admin);
+            return parsedData?.id;
         } catch (e) {
-            console.error("Failed to parse admin data from localStorage:", e)
-            return undefined
+            console.error("Failed to parse admin data:", e);
+            return undefined;
         }
-    }
+    };
 
     const clearForm = () => {
         setName("");
         setPnoNo("");
         setPassword("");
-        setCO("")
-        setPoliceStation("")
-    }
+        setCO("");
+        setPoliceStation("");
+    };
 
-    // --- Single User Creation Handler ---
     const handleGenerate = async () => {
+        const adminId = getAdminId();
+        if (!adminId) {
+            alert("Admin ID not found. Cannot create user.");
+            return;
+        }
+
+        if (!name || !pnoNo || (!selectedUser && !password) || !co || !policeStation) {
+            alert("Please fill all required fields.");
+            return;
+        }
+
+        setIsLoading(true); // Start Loader
         try {
-            const adminId = getAdminId()
-            if (!adminId) {
-                alert("Admin ID not found. Cannot create user.")
-                return
-            }
-
-            // Simple validation
-            if (!name || !pnoNo || !co || !policeStation) {
-                alert("Please fill all fields: Name, PNo No, Password, CO, and Police Station.")
-                return;
-            }
-
-            const sentData = {
-                name: name,
-                pnoNo: pnoNo,
-                password: password,
-                co: co,
-                policeStation: policeStation
-            }
-
-            // Call the store action for a single user
-            // NOTE: Assumes createUsers handles a single object correctly
             if (selectedUser) {
-
                 await updateUser({
                     co: co,
                     policeStation: policeStation
-                }, selectedUser.id)
-                clearForm()
-            }
-            else {
-                await createUsers(sentData, adminId)
-                // Clear form fields on success
-                clearForm
-                alert("User created successfully!")
-            }
+                }, selectedUser.id);
+                alert("User updated successfully!");
+                clearForm();
+            } else {
+                const sentData = {
+                    name: name,
+                    pnoNo: pnoNo,
+                    password: password,
+                    co: co,
+                    policeStation: policeStation
+                };
 
+                console.log(sentData);
 
+                // FIX: Pass as an array [sentData] to match the 'Bulk' expectations of the store
+                await createUsers([sentData as any], adminId);
+
+                toast("User created successfully!");
+                clearForm(); // Fixed: added parentheses
+            }
         } catch (error) {
-            console.error(error)
-            alert("Failed to create user. Check console for details.")
-        }
-    }
-
-    // --- Bulk User Creation Handler ---
-    const handleBulkUpload = async (data: BulkUserData[]) => {
-        try {
-            if (data.length === 0) {
-                alert("No valid user data found in the file.")
-                return
-            }
-
-            const adminId = getAdminId()
-            if (!adminId) {
-                alert("Admin ID not found. Cannot perform bulk signup.")
-                return
-            }
-
-            // Call the store action for bulk users
-            // NOTE: Assumes createUsers handles an array of objects correctly
-            await createUsers(data, adminId)
-            alert(`${data.length} users uploaded successfully!`)
-
-
-        } catch (error) {
-            console.error("Bulk upload error:", error)
-            alert("Failed to perform bulk upload. Check console for details.")
+            console.error(error);
+            alert("Action failed. Check console for details.");
         } finally {
-            setIsModalOpen(false); // Close modal regardless of success/failure
+            setIsLoading(false); // Stop Loader
         }
-    }
+    };
 
+    const handleBulkUpload = async (data: any[]) => {
+        if (data.length === 0) {
+            alert("No valid user data found.");
+            return;
+        }
 
-    // --- Dropdown Options Data ---
+        const adminId = getAdminId();
+        if (!adminId) return;
+
+        setIsLoading(true);
+        try {
+            await createUsers(data, adminId);
+            alert(`${data.length} users uploaded successfully!`);
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error("Bulk upload error:", error);
+            alert("Bulk upload failed.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const coOptions = [
-        { label: "Select CO", value: "" }, // Added default/placeholder
+        { label: "Select CO", value: "" },
         { label: "City", value: "city" },
         { label: "Kairana", value: "kairana" },
         { label: "Thanabhawan", value: "thanabhawan" },
-    ]
+    ];
 
-    const cityPsOptions = [
-        { label: "Select Police Station", value: "" }, // Added default/placeholder
-        { label: "Shamli", value: "shamli" },
-        { label: "Adarsh Mandi", value: "adarshMandi" },
-    ]
-
-    const kairanaPSoptions = [
-        { label: "Select Police Station", value: "" }, // Added default/placeholder
-        { label: "Kairana", value: "kairana" },
-        { label: "Jhinjana", value: "jhinjhana" },
-        { label: "Kandhala", value: "kandhala" },
-    ]
-
-    const thanabhawanPSOptions = [
-        { label: "Select Police Station", value: "" }, // Added default/placeholder
-        { label: "Thanabhawan", value: "thanabhawan" },
-        { label: "Babri", value: "babri" },
-        { label: "Garipukhta", value: "garipukhta" },
-    ]
-
-    /**
-     * Helper to determine which PS options to display based on the selected CO.
-     * Also resets policeStation when CO changes to ensure data consistency.
-     */
-    const handleCOSelect = (newCO: string) => {
-        setCO(newCO);
-        // Reset the Police Station selection whenever CO changes
-        setPoliceStation("");
-    }
-
-
-    useEffect(() => {
-        populateForm()
-    }, [])
-
-
-    /**
-     * Determines the correct list of Police Station options based on the current CO.
-     */
     const getPoliceStationOptions = () => {
         switch (co) {
             case "city":
-                return cityPsOptions;
+                return [
+                    { label: "Select Police Station", value: "" },
+                    { label: "Shamli", value: "shamli" },
+                    { label: "Adarsh Mandi", value: "adarshMandi" },
+                ];
             case "kairana":
-                return kairanaPSoptions;
+                return [
+                    { label: "Select Police Station", value: "" },
+                    { label: "Kairana", value: "kairana" },
+                    { label: "Jhinjana", value: "jhinjhana" },
+                    { label: "Kandhala", value: "kandhala" },
+                ];
             case "thanabhawan":
-                return thanabhawanPSOptions;
+                return [
+                    { label: "Select Police Station", value: "" },
+                    { label: "Thanabhawan", value: "thanabhawan" },
+                    { label: "Babri", value: "babri" },
+                    { label: "Garipukhta", value: "garipukhta" },
+                ];
             default:
-                // Return a list with only the placeholder if no CO is selected or if the value is unexpected
                 return [{ label: "Select CO first", value: "" }];
         }
-    }
-    // --- End Dropdown Logic ---
+    };
 
+    const handleCOSelect = (newCO: string) => {
+        setCO(newCO);
+        setPoliceStation("");
+    };
+
+    useEffect(() => {
+        populateForm();
+    }, [selectedUser]); // Added selectedUser as dependency
 
     return (
         <div className="flex flex-col items-center min-h-screen bg-gray-50 p-4">
-
-            {/* Modal for Bulk Upload */}
             <CreateUsers
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -222,52 +180,68 @@ const CreateUsersPage = () => {
             </div>
 
             <div className="w-full max-w-2xl mt-8">
-
-                {/* Bulk Upload Button */}
                 <div className="flex justify-end mb-4">
                     <Button
                         onClick={() => setIsModalOpen(true)}
-                        variant="default" // Using default, but you might want a distinct style
+                        disabled={isLoading}
                         className="bg-blue-600 hover:bg-blue-700"
                     >
                         ⬆️ Bulk Upload (Excel/CSV)
                     </Button>
                 </div>
 
-                {/* Single User Creation Form */}
                 <div className="bg-white shadow-xl border border-gray-200 p-8 rounded-xl flex flex-col gap-4">
-                    <h2 className="text-xl font-semibold mb-2 text-gray-700">Single User Entry</h2>
+                    <h2 className="text-xl font-semibold mb-2 text-gray-700">
+                        {selectedUser ? "Update User" : "Single User Entry"}
+                    </h2>
 
                     <InputComponent label="Name" value={name} setInput={setName} />
                     <InputComponent label="PNo No" value={pnoNo} setInput={setPnoNo} type="text" />
 
-                    <InputComponent disabled={selectedUser ? true : false} label="Password" value={password} setInput={setPassword} type="password" />
-
+                    {!selectedUser && (
+                        <InputComponent
+                            label="Password"
+                            value={password}
+                            setInput={setPassword}
+                            type="password"
+                        />
+                    )}
 
                     <DropDown
                         label="Select CO"
                         options={coOptions}
                         selectedValue={co}
-                        handleSelect={handleCOSelect} // Use helper to also clear policeStation
+                        handleSelect={handleCOSelect}
                     />
 
-                    {/* 2. Police Station DropDown (Conditionally Rendered based on CO) */}
                     <DropDown
                         label="Select Police Station"
                         options={getPoliceStationOptions()}
                         selectedValue={policeStation}
                         handleSelect={setPoliceStation}
-                        // Disable if no valid CO is selected
                         disabled={co === ""}
                     />
 
                     <div className="flex justify-center mt-4">
-                        <Button onClick={handleGenerate} className="w-1/3">Create User</Button>
+                        <Button
+                            onClick={handleGenerate}
+                            className="w-1/3"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Please wait
+                                </>
+                            ) : (
+                                selectedUser ? "Update User" : "Create User"
+                            )}
+                        </Button>
                     </div>
                 </div>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default CreateUsersPage
+export default CreateUsersPage;

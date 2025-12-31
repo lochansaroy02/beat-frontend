@@ -31,7 +31,7 @@ const Sidebar = () => {
                 <div className='flex justify-center'>
                     <Logo width={100} height={100} />
                 </div>
-                <div className='flex flex-col justify-between   h-full lg:gap-10 gap-6'>
+                <div className='flex flex-col justify-between text-sm  h-full lg:gap-10 gap-6'>
                     <div className='gap-2 flex flex-col'>
                         {sidebarData.map((item, index) => {
                             if (!item) return null;
