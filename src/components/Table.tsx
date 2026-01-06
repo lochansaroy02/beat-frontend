@@ -1,6 +1,7 @@
 "use client";
 import { useQRstore } from "@/store/qrStore"; // Import your store
 import { cordToAddress } from "@/utils/cordToAddress";
+import { convertToLocalFormat } from "@/utils/funtions";
 import {
     ChevronDown,
     ChevronUp,
@@ -51,9 +52,9 @@ const PersonAccordion = memo(({ person, onEdit }: { person: any, onEdit: (p: any
     const [isOpen, setIsOpen] = useState(false);
     const [scans, setScans] = useState<any[]>([]);
     const [fetchingScans, setFetchingScans] = useState(false);
-    const { getQRData } = useQRstore();
+    const { getQRData, allQRData } = useQRstore();
 
-
+    console.log(allQRData);
     // console.log(scans);
 
 
@@ -62,9 +63,8 @@ const PersonAccordion = memo(({ person, onEdit }: { person: any, onEdit: (p: any
             const loadData = async () => {
                 setFetchingScans(true);
                 try {
-                    const result = await getQRData(person.pnoNo);
-
-                    // If using the updated store above:
+                    const result = await getQRData(person.id);
+                    console.log(result);
                     if (result && result.success) {
                         setScans(result.data); // result.data is the array from backend
                     }
@@ -92,7 +92,7 @@ const PersonAccordion = memo(({ person, onEdit }: { person: any, onEdit: (p: any
                         <div className="flex items-center gap-3 mb-1">
                             <h3 className="font-bold text-gray-800 text-lg">{person.name}</h3>
                             <span className="text-xs font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded border border-blue-200">{person.pnoNo}</span>
-                            <button onClick={(e) => { e.stopPropagation(); onEdit(person); }} className="p-1 hover:bg-blue-100 rounded text-blue-600 ml-2">
+                            <button onClick={(e) => { e.stopPropagation(); onEdit(person); }} className="p-1 hover:bg-blue-100 rounded text-blugree-600 ml-2">
                                 <Pencil size={14} />
                             </button>
                         </div>
@@ -135,11 +135,14 @@ const PersonAccordion = memo(({ person, onEdit }: { person: any, onEdit: (p: any
                                             <td className="px-4 py-3">
                                                 <LocationCell lat={scan.lattitude} long={scan.longitude} initialLocation={scan.location || scan.address} />
                                             </td>
-                                            <td className="px-4 py-3 whitespace-nowrap">{scan.scannedOn}</td>
+                                            <td className="px-4 py-3 whitespace-nowrap">{
+                                                convertToLocalFormat(scan.scannedOn)
+
+                                            }</td>
                                             <td className="px-4 py-3">{scan.policeStation || "-"}</td>
                                             <td className="px-4 py-3">{scan.dutyPoint || "N/A"}</td>
                                             <td className="px-4 py-3 text-center">
-                                                <ImageSlider photos={scan.photos || []} />
+                                                <ImageSlider photos={scan?.photo || []} />
                                             </td>
                                         </tr>
                                     ))}

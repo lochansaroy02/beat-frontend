@@ -1,95 +1,62 @@
 "use client";
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 
-// Define a proper type for the photo object
 interface Photo {
     url: string;
-    userId: string;
     clickedOn: string | Date;
 }
 
-const ImageSlider = ({ photos }: { photos: Photo[] }) => {
+const ImageSlider = ({ photos }: { photos: Photo }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
+    console.log(photos);
 
-    const nextImage = () => {
-        setCurrentIndex((prevIndex) =>
-            prevIndex === photos.length - 1 ? 0 : prevIndex + 1
+
+
+    if (photos === undefined) {
+        return (
+            <div className="flex flex-col items-center justify-center p-2 text-gray-400">
+                <ImageIcon size={20} strokeWidth={1.5} />
+                <span className="text-[10px] italic">No Photos</span>
+            </div>
         );
-    };
-
-    const prevImage = () => {
-        setCurrentIndex((prevIndex) =>
-            prevIndex === 0 ? photos.length - 1 : prevIndex - 1
-        );
-    };
-
-    if (!photos || photos.length === 0) {
-        return <div className="text-gray-500 italic text-xs">No Photos</div>;
     }
 
-    const currentPhoto = photos[currentIndex];
 
-    // Helper to format the date nicely
+
     const formatDate = (dateString: string | Date) => {
-        return new Date(dateString).toLocaleDateString('en-IN', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        try {
+            return new Date(dateString).toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+            }) + ", " + new Date(dateString).toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short'
+            });
+        } catch (e) {
+            return "Date N/A";
+        }
     };
 
     return (
-        <div className="flex flex-col items-center gap-2">
-            {/* Image Container */}
-            <div className="relative w-40 h-40 border rounded shadow-sm flex items-center justify-center bg-gray-100 overflow-hidden">
-                {photos.length > 1 && (
-                    <button
-                        onClick={prevImage}
-                        className="absolute left-0 z-10 p-1 bg-black/50 text-white rounded-r-lg hover:bg-black/75 transition-opacity"
-                    >
-                        <ChevronLeft size={16} />
-                    </button>
-                )}
+        <div className="flex flex-col items-center gap-2 py-1">
+            <div className="relative w-24 h-24 border rounded-md shadow-sm bg-gray-50 overflow-hidden group">
 
-                <div className="flex justify-center items-center w-full h-full">
-                    {currentPhoto?.url && (
-                        <Image
-                            src={currentPhoto.url}
-                            alt={`Upload ${currentIndex + 1}`}
-                            width={160}
-                            height={160}
-                            className="object-contain"
-                        />
-                    )}
-                </div>
-
-                {photos.length > 1 && (
-                    <button
-                        onClick={nextImage}
-                        className="absolute right-0 z-10 p-1 bg-black/50 text-white rounded-l-lg hover:bg-black/75 transition-opacity"
-                    >
-                        <ChevronRight size={16} />
-                    </button>
-                )}
-
-                {/* Counter Tag */}
-                {photos.length > 1 && (
-                    <div className="absolute top-1 right-1 px-2 py-0.5 text-[10px] bg-black/60 text-white rounded-full">
-                        {currentIndex + 1} / {photos.length}
-                    </div>
-                )}
+                <Image
+                    src={photos.url}
+                    alt="Scan preview"
+                    fill
+                    sizes="96px"
+                    className="object-cover cursor-pointer hover:scale-110 transition-transform duration-300"
+                    unoptimized // Use this if you are getting Cloudinary domain errors in Next.js config
+                />
             </div>
 
-            {/* --- Date Display --- */}
-            <div className="flex items-center gap-1 text-gray-500">
-                <Calendar size={12} />
-                <span className="text-[10px] font-medium">
-
-                    {currentPhoto?.clickedOn ? formatDate(currentPhoto.clickedOn) : "Date N/A"}
+            <div className="flex items-center gap-1 text-gray-500 whitespace-nowrap">
+                <Calendar size={10} />
+                <span className="text-[9px] font-medium">
+                    {formatDate(photos.clickedOn)}
                 </span>
             </div>
         </div>

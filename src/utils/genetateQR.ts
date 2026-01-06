@@ -138,6 +138,20 @@ export const generatePdfWithQRCodes = async (inputData: InputData, filename: str
                     align: 'center'
                 });
             }
+            textY += LINE_HEIGHT;
+            if (item.dutyPoint) {
+                doc.setFontSize(8);
+                doc.text(`Duty Point (should be in English ): ${item.dutyPoint}`, pageWidth / 2, textY, {
+                    align: 'center'
+                });
+            }
+            textY += LINE_HEIGHT;
+            if (item.dutyPoint) {
+                doc.setFontSize(8);
+                doc.text(`Duty Point (should be in English ): ${item.dutyPoint}`, pageWidth / 2, textY, {
+                    align: 'center'
+                });
+            }
 
             qrCount++;
 
