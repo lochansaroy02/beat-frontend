@@ -1,6 +1,7 @@
 
 import { api } from '@/utils/constatns';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import { create } from 'zustand';
 
 
@@ -12,17 +13,41 @@ interface QrProps {
 }
 
 interface QRStoreProps {
-    allQRData: any[]
+    allQRData: any[],
+    qrData: any[],
+    setQrData: (data: any) => void
+    fetchQR: () => Promise<any>
     createQR: (data: QrProps) => Promise<any>
     getQRData: (id: string | undefined) => Promise<any>
     getAllQR: () => Promise<any>
     createBulkQR: (data: QrProps[]) => Promise<any>
     deleteQR: (qrId: string | undefined) => Promise<any>
     deleteMultipleQRs: (qrIds: string | undefined[]) => Promise<string>
+    updateQR: (id: string | null, payload: any) => Promise<any>
 }
 
 export const useQRstore = create<QRStoreProps>((set) => ({
     allQRData: [],
+    qrData: [],
+    setQrData: (data: any) => {
+        set({
+            qrData: data
+        })
+    },
+    fetchQR: async () => {
+        try {
+            const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/qr/get-data`);
+            const result = await response.data;
+            if (result.success) {
+                set({
+                    qrData: response.data
+                })
+            }
+        } catch (error) {
+            console.error("Fetch Error:", error);
+        }
+    },
+
     createQR: async (data: QrProps) => {
 
         try {
@@ -52,6 +77,17 @@ export const useQRstore = create<QRStoreProps>((set) => ({
         } catch (error) {
             console.error("Error getting data", error);
             return null;
+        }
+    },
+    updateQR: async (id: string | null, payload: any) => {
+        try {
+            const response = await axios.patch(`${process.env.NEXT_PUBLIC_BASE_URL}/qr/edit/${id}`, payload)
+            console.log(response.data);
+            if (response.data.success) {
+                toast('Qr updated')
+            }
+        } catch (error) {
+            console.error(error)
         }
     },
     getAllQR: async () => {

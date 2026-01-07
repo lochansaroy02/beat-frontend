@@ -15,7 +15,9 @@ const page = () => {
 
         }
     }
-    const excludedKeys = ['createdAt', 'id']
+
+
+    const excludedKeys = ['createdAt', 'id', 'photoId', 'scannedBy', 'scannedOn', 'updatedAt', 'userId']
 
     useEffect(() => {
         getAllQR()

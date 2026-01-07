@@ -1,6 +1,7 @@
 "use client";
+import ReportTable from "@/components/ReportTable";
+import { Sheet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-// Import XLSX library
 import * as XLSX from "xlsx";
 
 // 8 Phases - 24 Hour Convention
@@ -26,74 +27,71 @@ interface Person {
     qrData: Scan[];
 }
 
-const page = () => {
+const ActivityReportPage = () => {
     const [personData, setPersonData] = useState<Person[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
 
     const fetchReport = async () => {
         setIsLoading(true);
-        try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/qr/get-data`);
-            const result = await response.json();
-            if (result.success) {
-                setPersonData(result.data);
-            }
-        } catch (error) {
-            console.error("Fetch Error:", error);
-        } finally {
-            setIsLoading(false);
-        }
+      
     };
 
     useEffect(() => {
         fetchReport();
     }, []);
 
+    // Process data into stats and unique station list
     const { stats, uniqueStations } = useMemo(() => {
         const counts: Record<string, Record<string, number>> = {};
-        const stationSet = new Set<string>();
+        const stationMap = new Map<string, string>(); // To keep the original casing for display
 
         personData.forEach((person) => {
-            const station = person.policeStation || "Unknown";
-            stationSet.add(station);
-
-            if (!counts[station]) {
-                counts[station] = {};
-                EIGHT_PHASES.forEach((p) => (counts[station][p.label] = 0));
+            // FIX: Normalization to find Kandhala/Kairana regardless of spaces/case
+            const rawStation = person.policeStation?.trim() || "Unknown";
+            const stationKey = rawStation.toLowerCase();
+            // Map the lowercase key to the most common display version
+            if (!stationMap.has(stationKey)) {
+                stationMap.set(stationKey, rawStation);
             }
 
-            person.qrData.forEach((scan) => {
+            if (!counts[stationKey]) {
+                counts[stationKey] = {};
+                EIGHT_PHASES.forEach((p) => (counts[stationKey][p.label] = 0));
+            }
+
+            person.qrData?.forEach((scan) => {
                 const scanDate = new Date(scan.scannedOn);
                 const hour = scanDate.getHours();
                 const phase = EIGHT_PHASES.find(p => hour >= p.start && hour < p.end);
                 if (phase) {
-                    counts[station][phase.label] += 1;
+                    counts[stationKey][phase.label] += 1;
                 }
             });
         });
 
         return {
             stats: counts,
-            uniqueStations: Array.from(stationSet).sort(),
+            uniqueStations: Array.from(stationMap.values()).sort((a, b) => a.localeCompare(b)),
         };
     }, [personData]);
 
     const filteredRows = useMemo(() => {
         return uniqueStations.filter((station) =>
-            station.toLowerCase().includes(searchQuery.toLowerCase())
+            station.toLowerCase().includes(searchQuery.toLowerCase().trim())
         );
+
     }, [uniqueStations, searchQuery]);
 
-    // --- NEW: EXPORT FUNCTIONALITY ---
+
     const exportToExcel = () => {
-        // 1. Prepare Data for Excel
         const excelData = filteredRows.map((station) => {
+            const stationKey = station.toLowerCase();
             const row: any = { "Police Station": station.toUpperCase() };
             let rowTotal = 0;
 
             EIGHT_PHASES.forEach((phase) => {
-                const count = stats[station][phase.label] || 0;
+                const count = stats[stationKey]?.[phase.label] || 0;
                 row[phase.label] = count;
                 rowTotal += count;
             });
@@ -102,21 +100,18 @@ const page = () => {
             return row;
         });
 
-        // 2. Create worksheet and workbook
         const worksheet = XLSX.utils.json_to_sheet(excelData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Activity Report");
 
-        // 3. Define column widths for better readability
         const wscols = [
-            { wch: 25 }, // Station Name
+            { wch: 25 },
             ...EIGHT_PHASES.map(() => ({ wch: 15 })),
-            { wch: 15 }  // Total
+            { wch: 15 }
         ];
         worksheet["!cols"] = wscols;
 
-        // 4. Trigger Download
-        const fileName = `QR_Activity_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const fileName = `Activity_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
         XLSX.writeFile(workbook, fileName);
     };
 
@@ -128,93 +123,53 @@ const page = () => {
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-2 h-8 bg-indigo-600 rounded-full"></div>
                         <h1 className="text-4xl font-black tracking-tight text-slate-900 uppercase">
-                            Report
+                            Station Activity
                         </h1>
                     </div>
+                    <p className="text-slate-500 font-medium">Monitoring QR scan distribution across 24 hours.</p>
                 </div>
 
                 <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                    <input
-                        type="text"
-                        placeholder="Search..."
-                        className="pl-4 pr-10 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none flex-grow md:w-64"
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
+                    <div className="relative flex-grow md:w-64">
+                        <input
+                            type="text"
+                            placeholder="Search Station (e.g. Kairana)..."
+                            className="w-full pl-4 pr-10 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
 
-                    {/* EXPORT BUTTON */}
                     <button
                         onClick={exportToExcel}
-                        disabled={filteredRows.length === 0}
+                        disabled={filteredRows.length === 0 || isLoading}
                         className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-emerald-100 transition-all flex items-center gap-2"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                        <span><Sheet /></span>
                         Export Excel
                     </button>
 
                     <button
                         onClick={fetchReport}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 transition-all flex items-center gap-2"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 transition-all"
                     >
-                        {isLoading ? "Syncing" : "Refresh"}
+                        {isLoading ? "Syncing..." : "Refresh Data"}
                     </button>
                 </div>
             </div>
 
-            {/* Main Table Card */}
-            <div className="max-w-7xl mx-auto bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-                                <th className="p-6 sticky left-0 bg-slate-50 z-30 border-r border-slate-200 min-w-[200px]">Police Station</th>
-                                {EIGHT_PHASES.map((p) => (
-                                    <th key={p.label} className="p-4 text-center border-r border-slate-200/60">{p.label}</th>
-                                ))}
-                                <th className="p-4 text-center bg-indigo-50 text-indigo-700">Grand Total</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {!isLoading && filteredRows.map((station) => {
-                                let stationTotal = 0;
-                                return (
-                                    <tr key={station} className="hover:bg-slate-50 transition-colors group">
-                                        <td className="p-6 font-bold text-slate-800 sticky left-0 bg-white group-hover:bg-slate-50 z-20 border-r border-slate-200 capitalize">{station}</td>
-                                        {EIGHT_PHASES.map((p) => {
-                                            const count = stats[station][p.label] || 0;
-                                            stationTotal += count;
-                                            return (
-                                                <td key={p.label} className="p-4 text-center border-r border-slate-200/40">
-                                                    <span className={`inline-flex items-center justify-center min-w-[2.8rem] px-3 py-2 rounded-xl text-xs font-mono font-black border ${count >= 15 ? "bg-rose-50 text-rose-600 border-rose-100"
-                                                        : count >= 10 ? "bg-amber-50 text-amber-600 border-amber-100"
-                                                            : count > 0 ? "bg-indigo-50 text-indigo-600 border-indigo-100"
-                                                                : "text-slate-300 border-transparent"
-                                                        }`}>
-                                                        {count}
-                                                    </span>
-                                                </td>
-                                            );
-                                        })}
-                                        <td className="p-4 text-center font-black text-slate-900 bg-slate-50/50 group-hover:bg-indigo-50/50">{stationTotal}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <ReportTable phase={EIGHT_PHASES} filteredRows={filteredRows} isLoading={isLoading} stats={stats} />
 
-            {/* Bottom Summary Cards */}
+
             <div className="max-w-7xl mx-auto mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mb-1">Total Scans</p>
+                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mb-1">Total System Scans</p>
                     <p className="text-3xl font-black text-slate-900 leading-none">
-                        {personData.reduce((acc, curr) => acc + curr.qrData.length, 0)}
+                        {personData.reduce((acc, curr) => acc + (curr.qrData?.length || 0), 0).toLocaleString()}
                     </p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mb-1">Active Personnel</p>
+                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mb-1">Personnel Tracked</p>
                     <p className="text-3xl font-black text-indigo-600 leading-none">
                         {personData.length}
                     </p>
@@ -224,4 +179,4 @@ const page = () => {
     );
 };
 
-export default page;
+export default ActivityReportPage;

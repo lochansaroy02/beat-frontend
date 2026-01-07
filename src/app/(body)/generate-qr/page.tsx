@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import DropDown from "@/components/ui/DropDown";
 import InputComponent from "@/components/ui/InputComponent";
 import { useQRstore } from "@/store/qrStore";
+import { catagoryArr } from "@/utils/constatns";
 import { generateQrcode } from "@/utils/genetateQR";
 import axios from "axios";
 import { useState } from "react";
@@ -101,47 +102,6 @@ const Page = () => {
     };
 
 
-    const catagoryArr = [
-        {
-            label: "Bank", value: "bank",
-
-        },
-        {
-            label: "Patrol Pump", value: "petrolPump",
-
-        },
-        {
-            label: "HS satyapan", value: "satyapan",
-
-        },
-        {
-            label: "Gaushala", value: "gaushala",
-
-        },
-        {
-            label: "Tubewell", value: "tubewell",
-
-        },
-        {
-            label: "Religious Places", value: "religiousPlaces",
-
-        },
-        {
-            label: "Sarafa", value: "sarafa",
-
-        },
-        {
-            label: "wine shop", value: "wineShop",
-
-        },
-        {
-            label: "Mafiya/ Nakabjan/ Taska", value: "mafia",
-        },
-        {
-            label: "Other", value: "other",
-        },
-
-    ]
 
 
     // Handler to close the modal
