@@ -34,7 +34,7 @@ const page = () => {
     const fetchReport = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch("http://localhost:8080/qr/get-data");
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/qr/get-data`);
             const result = await response.json();
             if (result.success) {
                 setPersonData(result.data);
