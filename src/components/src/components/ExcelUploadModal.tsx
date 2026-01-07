@@ -10,6 +10,7 @@ interface QrProps {
     lattitude: string;
     longitude: string;
     policeStation: string;
+    catagory: string,
     dutyPoint?: string; // Optional dutyPoint for flexibility
 }
 
@@ -56,19 +57,18 @@ const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({ isOpen, onClose }) 
 
                 // Map/validate data to match QrProps
                 const bulkData: QrProps[] = json.map(row => ({
-                    lattitude: String(row.Latitude || row.latitude || row['Latitude']), // Use common column names
+                    lattitude: String(row.Latitude || row.latitude || row['Latitude']),
+                    catagory: String(row.category || row.category || row['CATEGORY']),
                     longitude: String(row.Longitude || row.longitude || row['Longitude']),
                     policeStation: String(row['Police Station'] || row.policeStation),
                     dutyPoint: String(row['Duty Point'] || row.dutyPoint || ""),
-                    CUG: String(row['CUG'] || row.cug)
-                })).filter(item => item.lattitude && item.longitude && item.policeStation && item.CUG); // Filter out invalid rows
+                })).filter(item => item.lattitude && item.longitude && item.policeStation);
 
                 if (bulkData.length === 0) {
                     throw new Error("No valid data found. Ensure your columns are 'Lattitude', 'Longitude', 'Police Station', 'Duty Point'.");
                 }
 
 
-                console.log(bulkData);
                 // Send bulk data to the store/backend
                 setMessage(`Found ${bulkData.length} valid entries. Uploading...`);
                 const result = await createBulkQR(bulkData);

@@ -19,7 +19,6 @@ interface QRStoreProps {
     createBulkQR: (data: QrProps[]) => Promise<any>
     deleteQR: (qrId: string | undefined) => Promise<any>
     deleteMultipleQRs: (qrIds: string | undefined[]) => Promise<string>
-
 }
 
 export const useQRstore = create<QRStoreProps>((set) => ({

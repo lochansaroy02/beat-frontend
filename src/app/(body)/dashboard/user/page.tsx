@@ -3,6 +3,7 @@ import UserTable from "@/components/Table";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuthStore } from "@/store/authStore";
 import { usePersonStore } from "@/store/personStore";
+import { Clipboard } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -53,9 +54,11 @@ const Page = () => {
                 />
                 <button
                     onClick={() => router.push("/report")}
-                    className="bg-slate-800 text-white px-6 py-2 rounded-lg font-semibold hover:bg-slate-700 transition-all flex items-center gap-2"
-                >
-                    📊 View Detailed Report
+                    className="bg-slate-800 text-white px-6 py-2 cursor-pointer rounded-lg  hover:bg-slate-700 transition-all flex items-center gap-2">
+                    <span>
+                        <Clipboard className="size-5" />
+                    </span>
+                    Generate Report
                 </button>
             </div>
 

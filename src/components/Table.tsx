@@ -54,8 +54,7 @@ const PersonAccordion = memo(({ person, onEdit }: { person: any, onEdit: (p: any
     const [fetchingScans, setFetchingScans] = useState(false);
     const { getQRData, allQRData } = useQRstore();
 
-    console.log(allQRData);
-    // console.log(scans);
+
 
 
     useEffect(() => {
