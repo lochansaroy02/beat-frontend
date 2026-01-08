@@ -64,21 +64,30 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    const { deleteMultipleQRs } = useQRstore();
-    const { updateQR } = useQRstore()
+    const { deleteMultipleQRs, updateQR } = useQRstore();
+
     // Reset to page 1 when searching
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, itemsPerPage]);
 
-    // 1. Filter Data
+    // 1. Filter Data - Updated to include Latitude and Longitude
     const filteredData = useMemo(() => {
         const baseData = data || [];
         if (!searchTerm) return baseData;
+
         const lowerCaseSearchTerm = searchTerm.toLowerCase();
+
         return baseData.filter(item => {
-            const policeStation = item.policeStation || item.PoliceStation;
-            return policeStation && String(policeStation).toLowerCase().includes(lowerCaseSearchTerm);
+            const policeStation = String(item.policeStation || item.PoliceStation || "").toLowerCase();
+            const latitude = String(item.lattitude || item.latitude || "").toLowerCase();
+            const longitude = String(item.longitude || "").toLowerCase();
+
+            return (
+                policeStation.includes(lowerCaseSearchTerm) ||
+                latitude.includes(lowerCaseSearchTerm) ||
+                longitude.includes(lowerCaseSearchTerm)
+            );
         });
     }, [data, searchTerm]);
 
@@ -87,7 +96,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
         return [...(filteredData || [])].reverse();
     }, [filteredData]);
 
-    // 3. Paginate Data (This is the performance fix)
+    // 3. Paginate Data
     const paginatedData = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
         return reversedData.slice(startIndex, startIndex + itemsPerPage);
@@ -127,29 +136,27 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
         e.stopPropagation();
         setEditingRowId(item.id);
         setEditFormData({ ...item });
-        console.log(editFormData);
     };
 
     const handleSaveEdit = async (e) => {
-        // Prevent form reload if inside a form
         if (e) e.preventDefault();
 
         const payload = {
             id: editingRowId,
-            // Match the backend's expected key name exactly
-            lattitude: editFormData.latitude,
+            lattitude: editFormData.lattitude || editFormData.latitude,
             longitude: editFormData.longitude,
-            catagory: editFormData.catagory,
+            catagory: editFormData.catagory || editFormData.category,
         };
 
         try {
             await updateQR(editingRowId, payload);
-            console.log("Updated Data:", editFormData);
+            toast.success("Changes saved successfully");
             setEditingRowId(null);
         } catch (err) {
             toast.error("Failed to save changes");
         }
     };
+
     if (!data || data.length === 0) {
         return (
             <div className="p-6 text-center text-gray-500 bg-white rounded-lg shadow-inner">
@@ -169,11 +176,11 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                 </h2>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-                    <div className="relative flex-grow sm:w-80">
+                    <div className="relative flex-grow sm:w-96">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             type="text"
-                            placeholder="Search Police Station..."
+                            placeholder="Search by PS, Lat, or Long..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-9 bg-white"
@@ -251,7 +258,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                                     </td>
 
                                     {filteredKeys.map((key) => {
-                                        const editableFields = ['lattitude', 'longitude', 'dutyPoint', 'category', 'catagory'];
+                                        const editableFields = ['lattitude', 'latitude', 'longitude', 'dutyPoint', 'category', 'catagory'];
                                         const isEditableField = editableFields.includes(key);
 
                                         return (
@@ -287,7 +294,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                 </table>
             </div>
 
-            {/* --- Pagination Controls --- */}
+            {/* Pagination Controls */}
             <div className="bg-white border-x border-b border-gray-200 px-4 py-3 flex items-center justify-between rounded-b-lg sm:px-6">
                 <div className="flex-1 flex justify-between sm:hidden">
                     <Button
@@ -312,7 +319,6 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                             <span className="font-medium">{reversedData.length}</span> results
                         </p>
 
-                        {/* Items Per Page Selector */}
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600">Rows:</span>
                             <select
