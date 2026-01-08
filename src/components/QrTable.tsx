@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useQRstore } from '@/store/qrStore';
 import { catagoryArr } from '@/utils/constatns'; // Check spelling of 'constants'
+import { generatePdfWithQRCodes } from '@/utils/genetateQR';
 import toast from 'react-hot-toast';
 import { CustomCheckbox } from './CustomCheckbox';
 import { Button } from './ui/button';
@@ -59,7 +60,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<any>({});
-
+    const [qrArr, setQrArr] = useState<any>([]);
     // Loading state for delete operation
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -125,14 +126,19 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
         }
     };
 
-    const handleRowSelect = (id: string) => {
+
+
+    const handleRowSelect = (item: any) => {
+        const id = item.id
         if (editingRowId === id) return;
         setSelectedRows(prev => {
             const newSet = new Set(prev);
+
             if (newSet.has(id)) newSet.delete(id);
             else newSet.add(id);
             return newSet;
         });
+        qrArr.push(item)
     };
 
     // --- NEW: Handle Delete Function ---
@@ -194,8 +200,15 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                 No data records available.
             </div>
         );
+
+
+
     }
 
+
+    const handleGenerate = () => {
+        generatePdfWithQRCodes(qrArr)
+    }
     return (
         <div className="bg-neutral-200 rounded-xl shadow-2xl p-4 md:p-6 overflow-x-auto">
             {/* Header Section */}
@@ -218,7 +231,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                     </div>
 
                     <div className='flex gap-2 shrink-0'>
-                        <Button className="bg-green-700 hover:bg-green-600" disabled={selectedRows.size === 0}>
+                        <Button onClick={handleGenerate} className="bg-green-700 hover:bg-green-600" disabled={selectedRows.size === 0}>
                             <QrCode className="w-5 h-5 mr-2" />
                             Generate ({selectedRows.size})
                         </Button>
@@ -266,7 +279,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                                 <tr
                                     key={item.id}
                                     className={`transition-colors cursor-pointer ${isEditing ? 'bg-amber-50' : isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-gray-50'}`}
-                                    onClick={() => handleRowSelect(item.id)}
+                                    onClick={() => handleRowSelect(item)}
                                 >
                                     <td className="px-4 py-4 w-1">
                                         <CustomCheckbox
