@@ -82,7 +82,7 @@ export const useQRstore = create<QRStoreProps>((set, get) => ({
     updateQR: async (id: string | null, payload: any) => {
         try {
             // Using 'api' constant for consistency
-            const response = await axios.patch(`${api}/qr/edit/${id}`, payload)
+            const response = await axios.put(`${api}/qr/edit/${id}`, payload)
 
             if (response.data.success) {
                 toast.success('QR updated successfully');
