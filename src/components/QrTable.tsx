@@ -8,14 +8,14 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 
 import { useQRstore } from '@/store/qrStore';
-import { catagoryArr } from '@/utils/constatns';
+import { catagoryArr } from '@/utils/constatns'; // Check spelling of 'constants'
 import toast from 'react-hot-toast';
 import { CustomCheckbox } from './CustomCheckbox';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 
 // --- Helper Functions ---
-const toTitleCase = (str) => {
+const toTitleCase = (str: string) => {
     if (!str) return '';
     return str
         .replace(/([A-Z])/g, ' $1')
@@ -26,7 +26,7 @@ const toTitleCase = (str) => {
         .join(' ');
 };
 
-const formatValue = (value) => {
+const formatValue = (value: any) => {
     if (typeof value === 'boolean') {
         return value ? (
             <span className="inline-flex items-center text-green-600 font-semibold">
@@ -55,10 +55,13 @@ interface QRTableProps {
 
 const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
     // Basic State
-    const [selectedRows, setSelectedRows] = useState(new Set());
+    const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<any>({});
+
+    // Loading state for delete operation
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -71,7 +74,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
         setCurrentPage(1);
     }, [searchTerm, itemsPerPage]);
 
-    // 1. Filter Data - Updated to include Latitude and Longitude
+    // 1. Filter Data
     const filteredData = useMemo(() => {
         const baseData = data || [];
         if (!searchTerm) return baseData;
@@ -122,7 +125,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
         }
     };
 
-    const handleRowSelect = (id) => {
+    const handleRowSelect = (id: string) => {
         if (editingRowId === id) return;
         setSelectedRows(prev => {
             const newSet = new Set(prev);
@@ -132,13 +135,40 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
         });
     };
 
-    const handleEditClick = (e, item) => {
+    // --- NEW: Handle Delete Function ---
+    const handleDelete = async () => {
+        if (selectedRows.size === 0) return;
+
+        const confirmDelete = window.confirm(`Are you sure you want to delete ${selectedRows.size} selected item(s)?`);
+        if (!confirmDelete) return;
+
+        setIsDeleting(true);
+        try {
+            // Convert Set to Array for the API call
+            const idsToDelete = Array.from(selectedRows);
+
+            // Call store function
+            const message = await deleteMultipleQRs(idsToDelete);
+
+            toast.success(message as string);
+
+            // Clear selection after successful delete
+            setSelectedRows(new Set());
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to delete some items");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const handleEditClick = (e: any, item: any) => {
         e.stopPropagation();
         setEditingRowId(item.id);
         setEditFormData({ ...item });
     };
 
-    const handleSaveEdit = async (e) => {
+    const handleSaveEdit = async (e: any) => {
         if (e) e.preventDefault();
 
         const payload = {
@@ -192,9 +222,15 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                             <QrCode className="w-5 h-5 mr-2" />
                             Generate ({selectedRows.size})
                         </Button>
-                        <Button className="bg-red-500 hover:bg-red-600" disabled={selectedRows.size === 0}>
+
+                        {/* UPDATED DELETE BUTTON */}
+                        <Button
+                            className="bg-red-500 hover:bg-red-600 disabled:opacity-50"
+                            disabled={selectedRows.size === 0 || isDeleting}
+                            onClick={handleDelete} // Linked function here
+                        >
                             <Trash2 className="w-5 h-5 mr-2" />
-                            Delete
+                            {isDeleting ? 'Deleting...' : 'Delete'}
                         </Button>
                     </div>
                 </div>
@@ -271,7 +307,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                                                             className="p-1 border rounded bg-white text-sm"
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
-                                                            {catagoryArr.map(cat => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
+                                                            {catagoryArr.map((cat: any) => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
                                                         </select>
                                                     ) : (
                                                         <Input

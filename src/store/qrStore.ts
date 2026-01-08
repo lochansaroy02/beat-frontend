@@ -22,11 +22,11 @@ interface QRStoreProps {
     getAllQR: () => Promise<any>
     createBulkQR: (data: QrProps[]) => Promise<any>
     deleteQR: (qrId: string | undefined) => Promise<any>
-    deleteMultipleQRs: (qrIds: string | undefined[]) => Promise<string>
+    deleteMultipleQRs: (qrIds: string[] | undefined[]) => Promise<string>
     updateQR: (id: string | null, payload: any) => Promise<any>
 }
 
-export const useQRstore = create<QRStoreProps>((set) => ({
+export const useQRstore = create<QRStoreProps>((set, get) => ({
     allQRData: [],
     qrData: [],
     setQrData: (data: any) => {
@@ -81,13 +81,20 @@ export const useQRstore = create<QRStoreProps>((set) => ({
     },
     updateQR: async (id: string | null, payload: any) => {
         try {
-            const response = await axios.patch(`${process.env.NEXT_PUBLIC_BASE_URL}/qr/edit/${id}`, payload)
-            console.log(response.data);
+            // Using 'api' constant for consistency
+            const response = await axios.patch(`${api}/qr/edit/${id}`, payload)
+
             if (response.data.success) {
-                toast('Qr updated')
+                toast.success('QR updated successfully');
+
+                // CRITICAL FIX: Refresh the list so the UI updates immediately
+                await get().getAllQR();
             }
+            return response.data;
         } catch (error) {
-            console.error(error)
+            console.error("Update Error:", error);
+            toast.error("Failed to update QR");
+            throw error;
         }
     },
     getAllQR: async () => {
@@ -111,7 +118,7 @@ export const useQRstore = create<QRStoreProps>((set) => ({
             console.log(error);
         }
     },
-    deleteMultipleQRs: async (qrIds: string | undefined[]) => {
+    deleteMultipleQRs: async (qrIds: string[] | undefined[]) => {
         let successCount = 0;
         let errorCount = 0;
         const results: any[] = [];
