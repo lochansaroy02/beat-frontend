@@ -66,3 +66,19 @@ export const convertToLocalFormat = (isoString) => {
     return `${year}-${month}-${day} ${strHours}:${minutes} ${ampm}`;
 };
 
+
+export const toTitleCase = (str) => {
+    if (!str) return '';
+
+    return str
+        // 1. Insert a space before any uppercase letter (for camelCase)
+        .replace(/([A-Z])/g, ' $1')
+        // 2. Replace underscores or hyphens with spaces (for snake/kebab-case)
+        .replace(/[_-]/g, ' ')
+        // 3. Remove leading/trailing whitespace and collapse multiple spaces
+        .trim()
+        .split(/\s+/)
+        // 4. Capitalize the first letter of every word
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+};

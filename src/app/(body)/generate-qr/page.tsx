@@ -5,195 +5,116 @@ import DropDown from "@/components/ui/DropDown";
 import InputComponent from "@/components/ui/InputComponent";
 import { useQRstore } from "@/store/qrStore";
 import { catagoryArr } from "@/utils/constatns";
-import { generateQrcode } from "@/utils/genetateQR";
-import axios from "axios";
+import { generatePdfWithQRCodes, generateSingleQrcodeUrl } from "@/utils/genetateQR";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 const Page = () => {
     const [lat, setLat] = useState("");
     const [long, setLong] = useState("");
     const [policeStation, setPoliceStation] = useState("");
     const [dutyPoint, setDutyPoint] = useState("");
-    const [catagory, setCatagory] = useState("")
+    const [catagory, setCatagory] = useState("");
     const [cug, setCug] = useState("");
 
-    const [url, setUrl] = useState("")
-    const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
+    const [url, setUrl] = useState(""); // For UI Preview
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
 
-    // ✅ validation states
-    const [latError, setLatError] = useState("");
-    const [longError, setLongError] = useState("");
-    const [address, setAddress] = useState(null);
-
-    const { createQR } = useQRstore()
-
-    const validateLatitude = (val: string) => {
-        const num = Number(val);
-        if (val === "") return "Latitude is required";
-        if (isNaN(num)) return "Latitude must be a number";
-        if (num < -90 || num > 90) return "Latitude must be between -90 and 90";
-        return "";
-    };
-
-    const validateLongitude = (val: string) => {
-        const num = Number(val);
-        if (val === "") return "Longitude is required";
-        if (isNaN(num)) return "Longitude must be a number";
-        if (num < -180 || num > 180) return "Longitude must be between -180 and 180";
-        return "";
-    };
-
-    const handleLatChange = (val: string) => {
-        setLat(val);
-        setLatError(validateLatitude(val));
-    };
-
-    const handleLongChange = (val: string) => {
-        setLong(val);
-        setLongError(validateLongitude(val));
-    };
-
-
-
-    const cordToAddress = async (lat: string, long: string) => {
-        try {
-            const response = await axios.get(`https://geocode.maps.co/reverse?lat=${lat}&lon=${long}&api_key=${process.env.NEXT_PUBLIC_FREE_MAP_API_KEY}`)
-            setAddress(response.data.address);
-        } catch (error) {
-            console.error("Geocoding error:", error);
-        }
-    }
+    const { createQR } = useQRstore();
 
     const handleGenerate = async () => {
-        // Run final validation check
-        const finalLatError = validateLatitude(lat);
-        const finalLongError = validateLongitude(long);
-
-        setLatError(finalLatError);
-        setLongError(finalLongError);
-
-        if (finalLatError || finalLongError || !policeStation) {
-            alert("Please correct the errors and fill all fields.");
+        // Validation: Note we check 'catagory' as well
+        if (!lat || !long || !policeStation || !dutyPoint || !catagory) {
+            toast.error("Please fill all fields including Category.");
             return;
         }
-        await cordToAddress(lat, long)
-        const sentData = {
-            lattitude: lat,
-            longitude: long,
-            policeStation: policeStation,
-            dutyPoint: dutyPoint,
-            cug: cug,
-            catagory: catagory
-        };
 
+        setIsGenerating(true);
+        const loadingToast = toast.loading("Saving to database and generating PDF...");
 
         try {
-            const url = await generateQrcode(sentData);
-            //@ts-ignore
-            setUrl(url);
-            const data = await createQR(sentData)
+            const sentData = {
+                lattitude: lat, // Key matches Backend
+                longitude: long,
+                policeStation: policeStation,
+                dutyPoint: dutyPoint,
+                catagory: catagory, // Key matches Backend
+            };
 
-            alert("Single QR code generated successfully!");
+            // 1. Save to Database
+            const result = await createQR(sentData);
 
-        } catch (error) {
-            console.error(error);
-            alert("Failed to generate QR code.");
+            if (result && (result.success || result.data)) {
+                // 2. Success: Generate Preview for the browser
+                const qrPreviewUrl = await generateSingleQrcodeUrl(sentData);
+                setUrl(qrPreviewUrl);
+
+                // 3. Generate and Download the PDF
+                const fileName = `QR_${dutyPoint.replace(/\s+/g, '_')}.pdf`;
+                await generatePdfWithQRCodes([sentData], fileName);
+
+                toast.success("Success! QR saved and PDF downloaded.", { id: loadingToast });
+
+                // Optional: Clear form
+                setDutyPoint("");
+            } else {
+                // Handle specific backend errors (like the 501 Already Exists)
+                const errorMsg = result?.message || "Failed to save QR to database.";
+                toast.error(errorMsg, { id: loadingToast });
+            }
+        } catch (error: any) {
+            console.error("Process Error:", error);
+            toast.error("An unexpected error occurred.", { id: loadingToast });
+        } finally {
+            setIsGenerating(false);
         }
     };
 
-
-
-
-    // Handler to close the modal
-    const handleModalClose = () => setIsModalOpen(false);
-
-
     return (
-        <div className="h-full flex items-center pt-8  flex-col">
-            <div className="w-full justify-center flex   ">
-                <h1 className="text-4xl   text-neutral-900 font-bold">Generate QR Code</h1>
-            </div>
+        <div className="h-full flex items-center pt-8 flex-col pb-10">
+            <h1 className="text-4xl text-neutral-900 font-bold mb-10">Generate QR Code</h1>
 
-            <div className="w-1/2 flex bg-neutral-300   border border-neutral-800/50  p-8 rounded-xl mt-12 flex-col gap-4">
-                <div className="flex justify-end mb-4">
-                    <Button onClick={() => setIsModalOpen(true)} className="bg-green-600 hover:bg-green-700">
-                        Upload from Excel 📊
+            <div className="w-full max-w-2xl flex bg-neutral-200 border border-neutral-300 p-8 rounded-2xl shadow-2xl flex-col gap-6">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-neutral-700">Manual Entry</h2>
+                    <Button onClick={() => setIsModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
+                        Bulk Upload (Excel)
                     </Button>
                 </div>
 
-                {/* Single Entry Form */}
-                <h2 className="text-2xl font-semibold mb-2 text-center">Single Entry</h2>
-
-                {/* Latitude */}
-                <div>
-                    <InputComponent
-                        label="Latitude"
-                        value={lat}
-                        setInput={handleLatChange}
-                        type="number"
-                    />
-                    {latError && <p className="text-red-500 text-sm">{latError}</p>}
+                <div className="grid grid-cols-2 gap-4">
+                    <InputComponent label="Latitude" value={lat} setInput={setLat} type="number" />
+                    <InputComponent label="Longitude" value={long} setInput={setLong} type="number" />
                 </div>
 
-                {/* Longitude */}
-                <div>
-                    <InputComponent
-                        label="Longitude"
-                        value={long}
-                        setInput={handleLongChange}
-                        type="number"
-                    />
-                    {longError && <p className="text-red-500 text-sm">{longError}</p>}
-                </div>
-
-                {/* Police Station */}
-                <InputComponent
-                    label="Police Station"
-                    value={policeStation}
-                    setInput={setPoliceStation}
-                />
-                <div>
-                    <InputComponent
-                        label="CUG Number"
-                        value={cug}
-                        setInput={setCug}
-                    />
-                    {longError && <p className="text-red-500 text-sm">{longError}</p>}
-                </div>
-                <InputComponent
-                    label="Duty Point"
-                    value={dutyPoint}
-                    setInput={setDutyPoint}
-                />
+                <InputComponent label="Police Station Name" value={policeStation} setInput={setPoliceStation} />
+                <InputComponent label="Duty Point Name" value={dutyPoint} setInput={setDutyPoint} />
 
                 <div>
-                    <label className="w-1/3 text-[14px] text-nowrap text-neutral-800" htmlFor="">Catagory</label>
+                    <label className="block text-sm font-semibold text-neutral-700 mb-2">Point Category</label>
                     <DropDown options={catagoryArr} selectedValue={catagory} handleSelect={setCatagory} />
                 </div>
-                <div className="flex  justify-center">
-                    <Button onClick={handleGenerate}>Generate Single QR</Button>
+
+                <Button
+                    onClick={handleGenerate}
+                    disabled={isGenerating}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-lg font-bold"
+                >
+                    {isGenerating ? "Processing..." : "Create QR & Download PDF"}
+                </Button>
+            </div>
+
+            {/* UI Preview Section */}
+            {url && (
+                <div className="mt-10 p-6 bg-white rounded-xl shadow-lg border flex flex-col items-center">
+                    <p className="text-sm font-bold text-indigo-600 mb-4 uppercase">Success Preview</p>
+                    <img src={url} alt="QR Preview" className="w-48 h-48 border p-2 rounded-lg" />
+                    <p className="mt-4 text-xs text-neutral-400 font-medium">Data has been secured in the Digital Malkhana database.</p>
                 </div>
-            </div>
+            )}
 
-            {/* QR Display */}
-            <div>
-                {url && (
-                    <div className="mt-8 flex flex-col items-center p-6 border rounded-lg shadow-lg bg-white">
-                        <h2 className="text-xl font-semibold mb-4">Scan Me!</h2>
-                        <img
-                            src={url}
-                            alt="Generated QR Code"
-                            className="w-64 h-64 border-4 border-gray-200"
-                        />
-                    </div>
-                )}
-            </div>
-
-            {/* Excel Upload Modal */}
-            <ExcelUploadModal
-                isOpen={isModalOpen}
-                onClose={handleModalClose}
-            />
+            <ExcelUploadModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
         </div>
     );
 };

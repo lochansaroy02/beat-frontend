@@ -49,14 +49,13 @@ export const useQRstore = create<QRStoreProps>((set, get) => ({
     },
 
     createQR: async (data: QrProps) => {
-
         try {
-            const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/qr/create`, data)
-            console.log(response);
-            return response.data
-        } catch (error) {
-            console.error(error)
-            return null
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/qr/create`, data);
+            return response.data; // This returns { success: true, data: ... } or { message: "..." }
+        } catch (error: any) {
+            console.error("Store Error:", error);
+            // Return the error response data so the component can show the "Already Exists" message
+            return error.response?.data || { success: false, message: "Server connection failed" };
         }
     },
     createBulkQR: async (data: QrProps[]) => {
