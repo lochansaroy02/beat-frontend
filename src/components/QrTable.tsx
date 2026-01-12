@@ -4,12 +4,12 @@ import {
     QrCode, Save, Search, Table,
     Trash2, X
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useQRstore } from '@/store/qrStore';
 import { catagoryArr } from '@/utils/constatns';
 import { toTitleCase } from '@/utils/funtions';
-import { generatePdfWithQRCodes } from '@/utils/genetateQR'; // Ensure this is imported
+import { generatePdfWithQRCodes } from '@/utils/genetateQR';
 import toast from 'react-hot-toast';
 import { CustomCheckbox } from './CustomCheckbox';
 import { Button } from './ui/button';
@@ -25,18 +25,11 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<any>({});
-
     const [isDeleting, setIsDeleting] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const { deleteMultipleQRs, updateQR } = useQRstore();
 
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm, itemsPerPage]);
-
-    // 1. Filter Data
+    // 1. Filter Data based on Search
     const filteredData = useMemo(() => {
         const baseData = data || [];
         if (!searchTerm) return baseData;
@@ -46,37 +39,34 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
             const policeStation = String(item.policeStation || item.PoliceStation || "").toLowerCase();
             const latitude = String(item.lattitude || item.latitude || "").toLowerCase();
             const longitude = String(item.longitude || "").toLowerCase();
+            const dutyPoint = String(item.dutyPoint || "").toLowerCase();
+
             return (
                 policeStation.includes(lowerCaseSearchTerm) ||
                 latitude.includes(lowerCaseSearchTerm) ||
-                longitude.includes(lowerCaseSearchTerm)
+                longitude.includes(lowerCaseSearchTerm) ||
+                dutyPoint.includes(lowerCaseSearchTerm)
             );
         });
     }, [data, searchTerm]);
 
+    // 2. Reverse data to show latest first
     const reversedData = useMemo(() => [...filteredData].reverse(), [filteredData]);
 
-    const paginatedData = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return reversedData.slice(startIndex, startIndex + itemsPerPage);
-    }, [reversedData, currentPage, itemsPerPage]);
-
-    const totalPages = Math.ceil(reversedData.length / itemsPerPage);
-
     const filteredKeys = useMemo(() => {
-        if (!filteredData.length) return [];
-        return Object.keys(filteredData[0]).filter(key => !excludedKeys.includes(key));
-    }, [filteredData, excludedKeys]);
+        if (!reversedData.length) return [];
+        return Object.keys(reversedData[0]).filter(key => !excludedKeys.includes(key));
+    }, [reversedData, excludedKeys]);
 
     // Selection Logic
-    const isAllSelected = filteredData.length > 0 && selectedRows.size === filteredData.length;
-    const isIndeterminate = selectedRows.size > 0 && selectedRows.size < filteredData.length;
+    const isAllSelected = reversedData.length > 0 && selectedRows.size === reversedData.length;
+    const isIndeterminate = selectedRows.size > 0 && selectedRows.size < reversedData.length;
 
     const handleSelectAll = () => {
         if (isAllSelected) {
             setSelectedRows(new Set());
         } else {
-            const newSelection = new Set(filteredData.map(item => item.id));
+            const newSelection = new Set(reversedData.map(item => item.id));
             setSelectedRows(newSelection);
         }
     };
@@ -91,17 +81,12 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
         });
     };
 
-    // --- FIX: GENERATE LOGIC ---
     const handleGenerate = async () => {
         if (selectedRows.size === 0) return;
-
-        // Find the full data objects for the selected IDs
         const selectedData = data.filter(item => selectedRows.has(item.id));
-
         const loadingToast = toast.loading(`Generating ${selectedData.length} QR codes...`);
 
         try {
-            // Map the data to match the expected LocationData interface if necessary
             const formattedData = selectedData.map(item => ({
                 lattitude: item.lattitude || item.latitude,
                 longitude: item.longitude,
@@ -110,10 +95,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
             }));
 
             await generatePdfWithQRCodes(formattedData, `Selected_QR_Codes_${Date.now()}.pdf`);
-
             toast.success("PDF generated successfully!", { id: loadingToast });
-            // Optional: Clear selection after generation
-            // setSelectedRows(new Set());
         } catch (error) {
             console.error(error);
             toast.error("Failed to generate PDF", { id: loadingToast });
@@ -154,7 +136,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
         };
 
         try {
-            await updateQR(editingRowId, payload);
+            await updateQR(editingRowId as string, payload);
             toast.success("Saved successfully");
             setEditingRowId(null);
         } catch (err) {
@@ -162,12 +144,14 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
         }
     };
 
+    console.log();
+
     return (
-        <div className="bg-neutral-200 rounded-xl shadow-2xl p-4 md:p-6 overflow-x-auto">
+        <div className="bg-neutral-200 rounded-xl shadow-2xl p-4 md:p-6">
             <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4'>
                 <h2 className="text-2xl font-bold text-indigo-700 flex items-center whitespace-nowrap">
                     <Table className="w-6 h-6 mr-2" />
-                    Duty Point Scans
+                    Duty Point Scans ({reversedData.length})
                 </h2>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
@@ -175,7 +159,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             type="text"
-                            placeholder="Search..."
+                            placeholder="Search points or stations..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-9 bg-white"
@@ -204,9 +188,9 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                 </div>
             </div>
 
-            <div className="overflow-hidden border border-gray-200 rounded-t-lg">
+            <div className="overflow-x-auto border border-gray-200 rounded-lg max-h-[70vh]">
                 <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-indigo-50">
+                    <thead className="bg-indigo-50 sticky top-0 z-10">
                         <tr>
                             <th className="px-4 py-3 w-1">
                                 <CustomCheckbox
@@ -225,7 +209,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                     </thead>
 
                     <tbody className="bg-white divide-y divide-gray-100">
-                        {paginatedData.map((item) => {
+                        {reversedData.map((item) => {
                             const isEditing = editingRowId === item.id;
                             const isSelected = selectedRows.has(item.id);
 
@@ -240,7 +224,7 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                                             checked={isSelected}
                                             indeterminate={false}
                                             onClick={(e) => {
-                                                e?.stopPropagation(); // Prevent trigger row click
+                                                e?.stopPropagation();
                                                 handleRowSelect(item.id);
                                             }}
                                         />
@@ -299,8 +283,9 @@ const QRTable = ({ data, excludedKeys = [] }: QRTableProps) => {
                     </tbody>
                 </table>
             </div>
-
-            {/* Pagination UI... (Keep your existing pagination code below) */}
+            {reversedData.length === 0 && (
+                <div className='text-center py-10 text-gray-500'>No records found.</div>
+            )}
         </div>
     );
 };
